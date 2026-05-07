@@ -1,0 +1,198 @@
+body {
+  margin: 0;
+  background: #0d1117;
+  font-family: Arial, "Microsoft JhengHei", sans-serif;
+  color: white;
+}
+
+.app {
+  max-width: 480px;
+  margin: auto;
+  padding: 20px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.topbar p {
+  margin: 5px 0 0;
+  color: #8b949e;
+  font-size: 13px;
+}
+
+.logout {
+  width: auto;
+  padding: 8px 12px;
+  background: #30363d;
+}
+
+.hero {
+  background: linear-gradient(135deg, #1e3c72, #2a5298);
+  padding: 26px;
+  border-radius: 22px;
+  margin-bottom: 20px;
+}
+
+.hero h2 {
+  margin: 0 0 10px;
+  font-size: 26px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.card,
+.creatorBox,
+.panel {
+  border-radius: 20px;
+  padding: 20px;
+  background: #161b22;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.card h3,
+.creatorBox h3 {
+  margin-top: 0;
+}
+
+.bullish {
+  background: #14532d;
+}
+
+.bearish {
+  background: #7f1d1d;
+}
+
+.warrant {
+  background: #1e3a8a;
+}
+
+.holdings {
+  background: #854d0e;
+}
+
+.creatorBox {
+  margin-top: 18px;
+  background: linear-gradient(135deg, #7c2d12, #f59e0b);
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #30363d;
+  background: #0d1117;
+  color: white;
+  font-size: 16px;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 14px;
+  background: #238636;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+button:disabled {
+  background: #30363d;
+  color: #8b949e;
+}
+
+.creatorBtn {
+  background: #b45309;
+}
+
+.link {
+  color: #58a6ff;
+  text-align: center;
+  cursor: pointer;
+}
+
+.notice {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  padding: 14px;
+  border-radius: 14px;
+  margin: 10px 0;
+  color: #c9d1d9;
+  font-size: 14px;
+}
+
+.checkbox {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.checkbox input {
+  width: auto;
+  margin: 0;
+}
+
+.stockItem,
+.adminItem {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  padding: 14px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+}
+
+.stockItem strong,
+.stockItem span,
+.stockItem small {
+  display: block;
+  margin-bottom: 4px;
+}
+.bottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: #161b22;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid #30363d;
+  z-index: 999;
+}
+
+.bottomNav button {
+  background: transparent;
+  border: none;
+  color: #8b949e;
+  font-size: 14px;
+  width: auto;
+  padding: 8px 10px;
+  margin: 0;
+}
+
+.bottomNav button.active {
+  color: #58a6ff;
+  font-weight: bold;
+}
+
+.pageWithNav {
+  padding-bottom: 100px;
+}

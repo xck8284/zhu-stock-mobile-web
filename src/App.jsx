@@ -528,6 +528,34 @@ setAdminUsers(data.items || []);
         <div>方案：{u.plan_type}</div>
         <div>狀態：{u.subscription_status}</div>
         <div>剩餘天數：{u.days_left}</div>
+        <button
+  onClick={async () => {
+    try {
+      const token = localStorage.getItem("zhu_mobile_token");
+
+      const response = await fetch(
+        `${API_BASE}/admin/toggle-user/${u.id}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      alert(data.message || "操作完成");
+
+      loadAdminUsers();
+
+    } catch (err) {
+      alert("操作失敗");
+    }
+  }}
+>
+  {u.is_active ? "停用會員" : "啟用會員"}
+</button>
       </div>
     ))}
   </div>

@@ -477,9 +477,17 @@ function AdminPage() {
       <div className="adminItem" onClick={() => alert("會員管理功能開發中")}>
   會員管理
 </div>
-      <div className="adminItem">推薦組織圖</div>
-      <div className="adminItem">用戶回饋</div>
-      <div className="adminItem">手機版資料同步狀態</div>
+      <div className="adminItem" onClick={() => alert("推薦組織圖功能開發中")}>
+  推薦組織圖
+</div>
+
+<div className="adminItem" onClick={() => alert("用戶回饋功能開發中")}>
+  用戶回饋
+</div>
+
+<div className="adminItem" onClick={() => alert("手機版資料同步狀態正常")}>
+  手機版資料同步狀態
+</div>
     </section>
   );
 }

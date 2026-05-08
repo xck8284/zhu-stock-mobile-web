@@ -477,7 +477,7 @@ function AdminPage() {
 
     console.log(data);
 
-    alert(`成功取得 ${data.length} 位會員`);
+alert(JSON.stringify(data));
 
   } catch (err) {
     console.error(err);

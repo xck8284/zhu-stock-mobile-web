@@ -486,7 +486,7 @@ function AdminPage() {
 
     console.log(data);
 
-alert(JSON.stringify(data));
+setAdminUsers(data.items || []);
 
   } catch (err) {
     console.error(err);

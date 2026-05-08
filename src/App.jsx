@@ -464,6 +464,11 @@ function SubscribePage({ showBankInfo, setShowBankInfo }) {
 }
 
 function AdminPage() {
+
+  const [adminUsers, setAdminUsers] = useState([]);
+  const loadAdminUsers = async () => {
+  alert("準備讀取會員資料");
+};
   return (
     <section className="panel pageWithNav">
       <h2>👑 創作者最高權限</h2>
@@ -474,7 +479,7 @@ function AdminPage() {
 >
   付款審核
 </div>
-      <div className="adminItem" onClick={() => alert("會員管理功能開發中")}>
+      <div className="adminItem" onClick={loadAdminUsers}>
   會員管理
 </div>
       <div className="adminItem" onClick={() => alert("推薦組織圖功能開發中")}>

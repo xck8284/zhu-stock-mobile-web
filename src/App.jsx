@@ -474,7 +474,9 @@ function AdminPage() {
 >
   付款審核
 </div>
-      <div className="adminItem">會員管理</div>
+      <div className="adminItem" onClick={() => alert("會員管理功能開發中")}>
+  會員管理
+</div>
       <div className="adminItem">推薦組織圖</div>
       <div className="adminItem">用戶回饋</div>
       <div className="adminItem">手機版資料同步狀態</div>

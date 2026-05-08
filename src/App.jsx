@@ -469,7 +469,12 @@ function AdminPage() {
     <section className="panel pageWithNav">
       <h2>👑 創作者最高權限</h2>
 
-      <div className="adminItem">付款審核</div>
+      <div
+  className="adminItem"
+  onClick={() => alert("付款審核功能開發中")}
+>
+  付款審核
+</div>
       <div className="adminItem">會員管理</div>
       <div className="adminItem">推薦組織圖</div>
       <div className="adminItem">用戶回饋</div>

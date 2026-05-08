@@ -28,6 +28,7 @@ function App() {
 
       if (response.ok) {
         setMemberInfo(data);
+        setIsCreator(Boolean(data.is_creator));
 
         localStorage.setItem(
           "zhu_mobile_user",
@@ -77,7 +78,7 @@ function App() {
 
   setMemberInfo(data);
 
-  setIsCreator(false);
+  setIsCreator(Boolean(data.is_creator) || creator);
   setPage("home");
 } 
 else {

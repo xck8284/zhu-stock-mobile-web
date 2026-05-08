@@ -14,14 +14,37 @@ function App() {
   const [password, setPassword] = useState("");
   const [memberInfo, setMemberInfo] = useState(null);
   useEffect(() => {
-  const savedUser = localStorage.getItem("zhu_mobile_user");
-  if (savedUser) {
-  setMemberInfo(JSON.parse(savedUser));
-}
+  const checkLoginStatus = async () => {
+    const savedAccount = localStorage.getItem("zhu_mobile_account");
 
-  if (savedUser) {
-    setPage("home");
-  }
+    if (!savedAccount) return;
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/license/status?account=${savedAccount}`
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMemberInfo(data);
+
+        localStorage.setItem(
+          "zhu_mobile_user",
+          JSON.stringify(data)
+        );
+
+        setPage("home");
+      } else {
+        localStorage.removeItem("zhu_mobile_user");
+        localStorage.removeItem("zhu_mobile_account");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  checkLoginStatus();
 }, []);
 
   const login = async (creator = false) => {

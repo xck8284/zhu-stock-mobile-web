@@ -75,6 +75,7 @@ function App() {
       if (response.ok) {
   localStorage.setItem("zhu_mobile_user", JSON.stringify(data));
   localStorage.setItem("zhu_mobile_account", email);
+  localStorage.setItem("zhu_mobile_token", data.token);
 
   setMemberInfo(data);
 
@@ -470,8 +471,13 @@ function AdminPage() {
   try {
 
     const response = await fetch(
-      `${API_BASE}/admin/users`
-    );
+  `${API_BASE}/admin/users`,
+  {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("zhu_mobile_token")}`
+    }
+  }
+);
 
     const data = await response.json();
 

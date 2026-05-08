@@ -196,3 +196,45 @@ button:disabled {
 .pageWithNav {
   padding-bottom: 100px;
 }
+.planCard {
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
+  border: 1px solid #3b82f6;
+  padding: 18px;
+  border-radius: 18px;
+  margin-bottom: 14px;
+  text-align: center;
+}
+
+.planCard h3 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+.planCard p {
+  margin: 0;
+  font-size: 20px;
+  font-weight: bold;
+  color: #facc15;
+}
+
+.trialBox {
+  background: linear-gradient(135deg, #78350f, #b45309);
+  padding: 18px;
+  border-radius: 18px;
+  margin: 18px 0;
+  text-align: center;
+}
+
+.trialBox h3 {
+  margin-top: 0;
+}
+
+.message {
+  background: #14532d;
+  color: white;
+  padding: 12px;
+  border-radius: 12px;
+  margin-top: 12px;
+  text-align: center;
+  font-weight: bold;
+}

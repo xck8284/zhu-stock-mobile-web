@@ -49,10 +49,8 @@ function App() {
 
   const login = async (creator = false) => {
     if (creator) {
-      setIsCreator(true);
-      setPage("home");
-      return;
-    }
+  setIsCreator(true);
+}
 
     if (!email || !password) {
       alert("請輸入 Email / 帳號與密碼");

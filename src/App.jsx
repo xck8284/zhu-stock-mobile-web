@@ -72,6 +72,9 @@ function App() {
 
       const data = await response.json();
 
+      console.log(data);
+alert(JSON.stringify(data));
+
       if (response.ok) {
   localStorage.setItem("zhu_mobile_user", JSON.stringify(data));
   localStorage.setItem("zhu_mobile_account", email);

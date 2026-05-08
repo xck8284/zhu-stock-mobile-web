@@ -467,7 +467,22 @@ function AdminPage() {
 
   const [adminUsers, setAdminUsers] = useState([]);
   const loadAdminUsers = async () => {
-  alert("準備讀取會員資料");
+  try {
+
+    const response = await fetch(
+      `${API_BASE}/admin/users`
+    );
+
+    const data = await response.json();
+
+    console.log(data);
+
+    alert(`成功取得 ${data.length} 位會員`);
+
+  } catch (err) {
+    console.error(err);
+    alert("讀取會員失敗");
+  }
 };
   return (
     <section className="panel pageWithNav">

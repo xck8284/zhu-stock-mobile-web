@@ -517,6 +517,22 @@ setAdminUsers(data.items || []);
 <div className="adminItem" onClick={() => alert("手機版資料同步狀態正常")}>
   手機版資料同步狀態
 </div>
+{adminUsers.length > 0 && (
+  <div className="adminList">
+    <h3>會員列表（{adminUsers.length}）</h3>
+
+    {adminUsers.map((u) => (
+      <div className="adminUserCard" key={u.id}>
+        <div>帳號：{u.username}</div>
+        <div>Email：{u.email}</div>
+        <div>方案：{u.plan_type}</div>
+        <div>狀態：{u.subscription_status}</div>
+        <div>剩餘天數：{u.days_left}</div>
+      </div>
+    ))}
+  </div>
+)}
+
     </section>
   );
 }

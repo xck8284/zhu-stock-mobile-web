@@ -78,11 +78,11 @@ alert(JSON.stringify(data));
       if (response.ok) {
   localStorage.setItem("zhu_mobile_user", JSON.stringify(data));
   localStorage.setItem("zhu_mobile_account", email);
-  localStorage.setItem("zhu_mobile_token", data.token);
+  localStorage.setItem("zhu_mobile_token", data.access_token);
 
   setMemberInfo(data);
 
-  setIsCreator(Boolean(data.is_creator) || creator);
+  setIsCreator(Boolean(data.user?.is_creator) || creator);
   setPage("home");
 } 
 else {

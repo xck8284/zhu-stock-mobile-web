@@ -521,9 +521,27 @@ function AdminPage() {
               <div>方案：{u.plan_type}</div>
               <div>狀態：{u.subscription_status}</div>
               <div>剩餘天數：{u.days_left}</div>
-              <button onClick={() => alert("下一步再接停用 / 啟用 API")}>
-                {u.is_active ? "停用會員" : "啟用會員"}
-              </button>
+              <button
+  onClick={async () => {
+    const token = localStorage.getItem("zhu_mobile_token");
+
+    await fetch(`${API_BASE}/admin/deactivate-user`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        account: u.username,
+        is_active: !u.is_active,
+      }),
+    });
+
+    loadAdminUsers();
+  }}
+>
+  {u.is_active ? "停用會員" : "啟用會員"}
+</button>
             </div>
           ))}
         </div>

@@ -517,14 +517,31 @@ function AdminPage() {
         手機版資料同步狀態
       </div>
 
-      {adminPage === "payment" && (
+     {adminPage === "payment" && (
   <div className="adminList">
     <h3>付款審核</h3>
 
-    <div className="adminUserCard">
-      <div>目前狀態：付款審核頁面已建立</div>
-      <div>下一步：串接後端付款回報 API</div>
-    </div>
+    <button
+      className="adminBtn"
+      onClick={async () => {
+        const token = localStorage.getItem("zhu_mobile_token");
+
+        const res = await fetch(
+          `${API_BASE}/admin/payment-reports`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+
+        const data = await res.json();
+        console.log(data);
+        alert(JSON.stringify(data));
+      }}
+    >
+      讀取付款回報
+    </button>
   </div>
 )}
       

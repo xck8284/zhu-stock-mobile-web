@@ -98,7 +98,7 @@ else {
 }
     } catch (error) {
       console.error(error);
-      alert("伺服器連線失敗");
+    console.error(error);
     }
   };
 

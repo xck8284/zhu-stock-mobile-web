@@ -15,34 +15,20 @@ function App() {
   const [password, setPassword] = useState("");
   const [memberInfo, setMemberInfo] = useState(null);
   useEffect(() => {
-  const checkLoginStatus = async () => {
-    const savedAccount = localStorage.getItem("zhu_mobile_account");
+  const checkLoginStatus = () => {
+    const savedUser = localStorage.getItem("zhu_mobile_user");
 
-    if (!savedAccount) return;
+    if (!savedUser) return;
 
     try {
-      const response = await fetch(
-        `${API_BASE}/license/status?account=${savedAccount}`
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setMemberInfo(data);
-        setIsCreator(Boolean(data.is_creator));
-
-        localStorage.setItem(
-          "zhu_mobile_user",
-          JSON.stringify(data)
-        );
-
-        setPage("home");
-      } else {
-        localStorage.removeItem("zhu_mobile_user");
-        localStorage.removeItem("zhu_mobile_account");
-      }
+      const data = JSON.parse(savedUser);
+      setMemberInfo(data);
+      setIsCreator(Boolean(data.is_creator));
+      setPage("home");
     } catch (err) {
       console.error(err);
+      localStorage.removeItem("zhu_mobile_user");
+      localStorage.removeItem("zhu_mobile_account");
     }
   };
 
@@ -50,26 +36,27 @@ function App() {
 }, []);
 
   const login = async (creator = false) => {
-    if (creator) {
-  setIsCreator(true);
-}
-
     if (!email || !password) {
       alert("請輸入 Email / 帳號與密碼");
       return;
     }
 
     const data = {
-  account: email,
-  plan: "月訂閱",
-  days_left: 15,
-  is_creator: creator
-};
+      account: email,
+      plan: "月訂閱",
+      days_left: 15,
+      label: "月訂閱（剩餘 15 天）",
+      allowed: true,
+      is_creator: creator,
+    };
 
-setMemberInfo(data);
+    localStorage.setItem("zhu_mobile_user", JSON.stringify(data));
+    localStorage.setItem("zhu_mobile_account", email);
 
-setIsCreator(Boolean(data.is_creator));
-setPage("home");
+    setMemberInfo(data);
+    setIsCreator(Boolean(data.is_creator));
+    setPage("home");
+  };
 
   const logout = () => {
   localStorage.removeItem("zhu_mobile_user");

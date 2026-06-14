@@ -480,11 +480,11 @@ function AdminPage() {
       <h2>👑 創作者最高權限</h2>
 
       <div
-        className="adminItem"
-        onClick={() => alert("付款審核功能待重建")}
-      >
-        付款審核
-      </div>
+  className="adminItem"
+  onClick={() => setAdminPage("payment")}
+>
+  付款審核
+</div>
 
       <div className="adminItem" onClick={loadAdminUsers}>
         會員管理

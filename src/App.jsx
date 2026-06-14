@@ -537,8 +537,19 @@ function AdminPage() {
 <div>方案：{u.plan_type}</div>
 <div>狀態：{u.subscription_status}</div>
 <div>剩餘天數：{u.days_left}</div>
-<div>到期日：{u.subscription_end_at || "-"}</div>
-<div>註冊日：{u.created_at || "-"}</div>
+<div>
+到期日：
+{u.subscription_end_at
+ ? new Date(u.subscription_end_at).toLocaleDateString("zh-TW")
+ : "-"}
+</div>
+
+<div>
+註冊日：
+{u.created_at
+ ? new Date(u.created_at).toLocaleDateString("zh-TW")
+ : "-"}
+</div>
               <button
   onClick={async () => {
     const token = localStorage.getItem("zhu_mobile_token");

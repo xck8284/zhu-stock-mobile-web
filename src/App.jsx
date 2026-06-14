@@ -426,7 +426,13 @@ function SubscribePage({ showBankInfo, setShowBankInfo }) {
           <input placeholder="匯款末五碼" />
           <input placeholder="匯款金額" />
 
-          <button>送出付款審核</button>
+          <button
+  onClick={() => {
+    alert("付款審核已送出");
+  }}
+>
+  送出付款審核
+</button>
         </>
       )}
     </section>

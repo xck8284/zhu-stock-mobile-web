@@ -520,7 +520,11 @@ function AdminPage() {
       {adminPage === "payment" && (
   <div className="adminList">
     <h3>付款審核</h3>
-    <p>付款審核資料待串接</p>
+
+    <div className="adminUserCard">
+      <div>目前狀態：付款審核頁面已建立</div>
+      <div>下一步：串接後端付款回報 API</div>
+    </div>
   </div>
 )}
       

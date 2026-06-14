@@ -517,6 +517,13 @@ function AdminPage() {
         手機版資料同步狀態
       </div>
 
+      {adminPage === "payment" && (
+  <div className="adminList">
+    <h3>付款審核</h3>
+    <p>付款審核資料待串接</p>
+  </div>
+)}
+      
       {adminUsers.length > 0 && (
         <div className="adminList">
           <h3>會員列表（{adminUsers.length}）</h3>

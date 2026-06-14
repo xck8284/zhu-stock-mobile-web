@@ -311,31 +311,47 @@ function HomePage({ setPage, isCreator, memberInfo }) {
 }
 
 function StockListPage({ title, type }) {
-  const bullish = [
-    { code: "2330", name: "台積電", score: 128, star: "★★★★★", bias: "18.2%" },
-    { code: "2317", name: "鴻海", score: 116, star: "★★★★★", bias: "12.7%" },
-    { code: "2454", name: "聯發科", score: 108, star: "★★★★★", bias: "10.5%" },
-  ];
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const bearish = [
-    { code: "2603", name: "長榮", score: 102, star: "★★★★☆", bias: "-9.8%" },
-    { code: "2615", name: "萬海", score: 96, star: "★★★★☆", bias: "-7.4%" },
-    { code: "3481", name: "群創", score: 91, star: "★★★★☆", bias: "-6.3%" },
-  ];
+  useEffect(() => {
+    const loadStocks = async () => {
+      try {
+        const url =
+          type === "bullish"
+            ? `${API_BASE}/stocks/bullish`
+            : `${API_BASE}/bearish`;
 
-  const data = type === "bullish" ? bullish : bearish;
+        const response = await fetch(url);
+        const result = await response.json();
+
+        setData(result.items || []);
+      } catch (err) {
+        console.error(err);
+        alert("讀取股票資料失敗");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStocks();
+  }, [type]);
 
   return (
     <section className="panel pageWithNav">
       <h2>{title}</h2>
 
+      {loading && <p>資料讀取中...</p>}
+
+      {!loading && data.length === 0 && <p>目前沒有資料</p>}
+
       {data.map((s) => (
-        <div className="stockItem" key={s.code}>
+        <div className="stockItem" key={s.stock_id || s.code}>
           <strong>
-            {s.code} {s.name}
+            {s.stock_id || s.code} {s.name}
           </strong>
-          <span>{s.star}</span>
-          <small>StrongScore：{s.score}</small>
+          <span>{s.stars || s.star}</span>
+          <small>StrongScore：{s.strong_score || s.score}</small>
           <small>乖離率：{s.bias}</small>
         </div>
       ))}

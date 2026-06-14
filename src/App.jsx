@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import { bullishStocks, bearishStocks } from "./analysisData";
-const API_BASE = "https://zhu-stock-app.onrender.com";
-
 
 function App() {
   const [page, setPage] = useState("login");
@@ -434,99 +432,87 @@ function SubscribePage({ showBankInfo, setShowBankInfo }) {
 }
 
 function AdminPage() {
+  const demoUsers = [
+    {
+      id: 1,
+      username: "admin",
+      email: "admin@example.com",
+      plan_type: "creator",
+      subscription_status: "active",
+      days_left: 999,
+      is_active: true,
+    },
+    {
+      id: 2,
+      username: "test_user",
+      email: "test@example.com",
+      plan_type: "monthly",
+      subscription_status: "active",
+      days_left: 15,
+      is_active: true,
+    },
+  ];
 
   const [adminUsers, setAdminUsers] = useState([]);
-  const loadAdminUsers = async () => {
-  try {
 
-    const response = await fetch(
-  `${API_BASE}/admin/users`,
-  {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("zhu_mobile_token")}`
-    }
-  }
-);
+  const loadAdminUsers = () => {
+    setAdminUsers(demoUsers);
+  };
 
-    const data = await response.json();
-
-    console.log(data);
-
-setAdminUsers(data.items || []);
-
-  } catch (err) {
-    console.error(err);
-    alert("讀取會員失敗");
-  }
-};
   return (
     <section className="panel pageWithNav">
       <h2>👑 創作者最高權限</h2>
 
       <div
-  className="adminItem"
-  onClick={() => alert("付款審核功能開發中")}
->
-  付款審核
-</div>
-      <div className="adminItem" onClick={loadAdminUsers}>
-  會員管理
-</div>
-      <div className="adminItem" onClick={() => alert("推薦組織圖功能開發中")}>
-  推薦組織圖
-</div>
-
-<div className="adminItem" onClick={() => alert("用戶回饋功能開發中")}>
-  用戶回饋
-</div>
-
-<div className="adminItem" onClick={() => alert("手機版資料同步狀態正常")}>
-  手機版資料同步狀態
-</div>
-{adminUsers.length > 0 && (
-  <div className="adminList">
-    <h3>會員列表（{adminUsers.length}）</h3>
-
-    {adminUsers.map((u) => (
-      <div className="adminUserCard" key={u.id}>
-        <div>帳號：{u.username}</div>
-        <div>Email：{u.email}</div>
-        <div>方案：{u.plan_type}</div>
-        <div>狀態：{u.subscription_status}</div>
-        <div>剩餘天數：{u.days_left}</div>
-        <button
-  onClick={async () => {
-    try {
-      const token = localStorage.getItem("zhu_mobile_token");
-
-      const response = await fetch(
-        `${API_BASE}/admin/toggle-user/${u.id}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      alert(data.message || "操作完成");
-
-      loadAdminUsers();
-
-    } catch (err) {
-      alert("操作失敗");
-    }
-  }}
->
-  {u.is_active ? "停用會員" : "啟用會員"}
-</button>
+        className="adminItem"
+        onClick={() => alert("付款審核功能待重建")}
+      >
+        付款審核
       </div>
-    ))}
-  </div>
-)}
 
+      <div className="adminItem" onClick={loadAdminUsers}>
+        會員管理
+      </div>
+
+      <div
+        className="adminItem"
+        onClick={() => alert("推薦組織圖功能待重建")}
+      >
+        推薦組織圖
+      </div>
+
+      <div
+        className="adminItem"
+        onClick={() => alert("用戶回饋功能待重建")}
+      >
+        用戶回饋
+      </div>
+
+      <div
+        className="adminItem"
+        onClick={() => alert("手機版資料目前使用網頁版獨立資料")}
+      >
+        手機版資料同步狀態
+      </div>
+
+      {adminUsers.length > 0 && (
+        <div className="adminList">
+          <h3>會員列表（{adminUsers.length}）</h3>
+
+          {adminUsers.map((u) => (
+            <div className="adminUserCard" key={u.id}>
+              <div>帳號：{u.username}</div>
+              <div>Email：{u.email}</div>
+              <div>方案：{u.plan_type}</div>
+              <div>狀態：{u.subscription_status}</div>
+              <div>剩餘天數：{u.days_left}</div>
+              <button onClick={() => alert("會員狀態切換功能待重建")}>
+                {u.is_active ? "停用會員" : "啟用會員"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

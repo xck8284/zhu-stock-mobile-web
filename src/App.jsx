@@ -521,28 +521,21 @@ function AdminPage() {
   <div className="adminList">
     <h3>付款審核</h3>
 
-    <button
-      className="adminBtn"
-      onClick={async () => {
-        const token = localStorage.getItem("zhu_mobile_token");
+    <div className="adminUserCard">
+  <div>帳號：test001</div>
+  <div>方案：月訂閱</div>
+  <div>匯款後五碼：12345</div>
+  <div>金額：2888</div>
+  <div>狀態：待審核</div>
 
-        const res = await fetch(
-          `${API_BASE}/admin/payment-reports`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
-        );
+  <button className="adminBtn">
+    審核通過
+  </button>
 
-        const data = await res.json();
-        console.log(data);
-        alert(JSON.stringify(data));
-      }}
-    >
-      讀取付款回報
-    </button>
-  </div>
+  <button className="adminBtn">
+    退回申請
+  </button>
+</div>
 )}
       
       {adminUsers.length > 0 && (

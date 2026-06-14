@@ -59,48 +59,17 @@ function App() {
       return;
     }
 
-    try {
-      const response = await fetch(`${API_BASE}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+    const data = {
   account: email,
-  password: password,
-}),
-      });
+  plan: "月訂閱",
+  days_left: 15,
+  is_creator: creator
+};
 
-      const data = await response.json();
+setMemberInfo(data);
 
-      console.log(data);
-alert(JSON.stringify(data));
-
-      if (response.ok) {
-  localStorage.setItem("zhu_mobile_user", JSON.stringify(data));
-  localStorage.setItem("zhu_mobile_account", email);
-  localStorage.setItem("zhu_mobile_token", data.access_token);
-
-  setMemberInfo(data);
-
-  setIsCreator(Boolean(data.user?.is_creator) || creator);
-  setPage("home");
-} 
-else {
-  const errorText =
-    typeof data.detail === "string"
-      ? data.detail
-      : data.message
-      ? data.message
-      : JSON.stringify(data);
-
-  alert(errorText || "登入失敗");
-}
-    } catch (error) {
-      console.error(error);
-    console.error(error);
-    }
-  };
+setIsCreator(Boolean(data.is_creator));
+setPage("home");
 
   const logout = () => {
   localStorage.removeItem("zhu_mobile_user");

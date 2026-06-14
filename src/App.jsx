@@ -521,7 +521,7 @@ function AdminPage() {
               <div>方案：{u.plan_type}</div>
               <div>狀態：{u.subscription_status}</div>
               <div>剩餘天數：{u.days_left}</div>
-              <button onClick={() => alert("會員狀態切換功能待重建")}>
+              <button onClick={() => alert("下一步再接停用 / 啟用 API")}>
                 {u.is_active ? "停用會員" : "啟用會員"}
               </button>
             </div>

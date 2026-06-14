@@ -486,9 +486,15 @@ function AdminPage() {
   付款審核
 </div>
 
-      <div className="adminItem" onClick={loadAdminUsers}>
-        會員管理
-      </div>
+  <div
+  className="adminItem"
+  onClick={() => {
+    loadAdminUsers();
+    setAdminPage("member");
+  }}
+>
+  會員管理
+</div>
 
       <div
         className="adminItem"

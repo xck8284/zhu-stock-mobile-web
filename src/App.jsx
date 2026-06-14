@@ -268,13 +268,10 @@ function HomePage({ setPage, isCreator, memberInfo }) {
     <>
       <section className="hero">
         <h2>今日分析中心</h2>
-        <p>
+<p>
   會員狀態：
-  {memberInfo?.is_paid
-    ? "已訂閱"
-    : memberInfo?.trial_active
-    ? "免費試用中"
-    : "已到期"}
+  {memberInfo?.label ||
+    (memberInfo?.allowed ? "可使用" : "已到期")}
 </p>
       </section>
 

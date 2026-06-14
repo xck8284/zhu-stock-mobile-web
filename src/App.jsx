@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import { bullishStocks, bearishStocks } from "./analysisData";
 
-const API_BASE = "https://zhu-stock-app.onrender.com";
+
 
 function App() {
   const [page, setPage] = useState("login");

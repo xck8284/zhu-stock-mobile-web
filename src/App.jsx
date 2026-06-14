@@ -457,9 +457,22 @@ function AdminPage() {
 
   const [adminUsers, setAdminUsers] = useState([]);
 
-  const loadAdminUsers = () => {
-    setAdminUsers(demoUsers);
-  };
+ const loadAdminUsers = async () => {
+  const token = localStorage.getItem("zhu_mobile_token");
+
+  const response = await fetch(
+    `${API_BASE}/admin/users`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  setAdminUsers(data.items || []);
+};
 
   return (
     <section className="panel pageWithNav">

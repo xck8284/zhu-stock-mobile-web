@@ -323,7 +323,7 @@ function StockListPage({ title, type }) {
 setData(result);
       } catch (err) {
         console.error(err);
-        alert("讀取股票資料失敗");
+        
       } finally {
         setLoading(false);
       }

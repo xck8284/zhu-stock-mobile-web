@@ -530,11 +530,15 @@ function AdminPage() {
 
           {adminUsers.map((u) => (
             <div className="adminUserCard" key={u.id}>
-              <div>帳號：{u.username}</div>
-              <div>Email：{u.email}</div>
-              <div>方案：{u.plan_type}</div>
-              <div>狀態：{u.subscription_status}</div>
-              <div>剩餘天數：{u.days_left}</div>
+             <div>帳號：{u.username}</div>
+<div>姓名：{u.full_name || "-"}</div>
+<div>Email：{u.email}</div>
+<div>手機：{u.phone || "-"}</div>
+<div>方案：{u.plan_type}</div>
+<div>狀態：{u.subscription_status}</div>
+<div>剩餘天數：{u.days_left}</div>
+<div>到期日：{u.subscription_end_at || "-"}</div>
+<div>註冊日：{u.created_at || "-"}</div>
               <button
   onClick={async () => {
     const token = localStorage.getItem("zhu_mobile_token");

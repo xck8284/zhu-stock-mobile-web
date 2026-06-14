@@ -315,15 +315,12 @@ function StockListPage({ title, type }) {
   useEffect(() => {
     const loadStocks = async () => {
       try {
-        const url =
-          type === "bullish"
-            ? `${API_BASE}/stocks/bullish`
-            : `${API_BASE}/bearish`;
+        const result =
+  type === "bullish"
+    ? bullishStocks
+    : bearishStocks;
 
-        const response = await fetch(url);
-        const result = await response.json();
-
-        setData(result.items || []);
+setData(result);
       } catch (err) {
         console.error(err);
         alert("讀取股票資料失敗");

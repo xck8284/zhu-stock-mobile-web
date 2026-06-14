@@ -456,6 +456,7 @@ function AdminPage() {
   ];
 
   const [adminUsers, setAdminUsers] = useState([]);
+  const [adminPage, setAdminPage] = useState("");
 
  const loadAdminUsers = async () => {
   const token = localStorage.getItem("zhu_mobile_token");

@@ -456,7 +456,8 @@ function AdminPage() {
   ];
 
   const [adminUsers, setAdminUsers] = useState([]);
-  const [adminPage, setAdminPage] = useState("");
+const [adminPage, setAdminPage] = useState("");
+const [paymentStatus, setPaymentStatus] = useState("待審核");
 
  const loadAdminUsers = async () => {
   const token = localStorage.getItem("zhu_mobile_token");
@@ -526,10 +527,20 @@ function AdminPage() {
       <div>方案：月訂閱</div>
       <div>匯款後五碼：12345</div>
       <div>金額：2888</div>
-      <div>狀態：待審核</div>
+      <div>狀態：{paymentStatus}</div>
 
-      <button className="adminBtn">審核通過</button>
-      <button className="adminBtn">退回申請</button>
+      <button
+  className="adminBtn"
+  onClick={() => setPaymentStatus("已通過")}
+>
+  審核通過
+</button>
+      <button
+  className="adminBtn"
+  onClick={() => setPaymentStatus("已退回")}
+>
+  退回申請
+</button>
     </div>
   </div>
 )}

@@ -315,12 +315,11 @@ function StockListPage({ title, type }) {
   useEffect(() => {
     const loadStocks = async () => {
       try {
-        const result =
+ setData(
   type === "bullish"
     ? bullishStocks
-    : bearishStocks;
-
-setData(result);
+    : bearishStocks
+);
       } catch (err) {
         console.error(err);
         

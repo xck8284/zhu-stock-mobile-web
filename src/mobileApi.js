@@ -1,4 +1,4 @@
-const API_BASE = "https://zhu-stock-app.onrender.com";
+const API_BASE = "https://zhu-stock-mobile-api.onrender.com";
 
 export async function adminFetch(url, token) {
   const res = await fetch(`${API_BASE}${url}`, {

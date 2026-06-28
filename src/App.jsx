@@ -538,7 +538,7 @@ function AdminPage() {
 
   const loadPaymentReports = async () => {
     try {
-      const response = await fetch(`${API_BASE}/admin/payment-reports`, {
+      const response = await fetch(`${API_BASE}/mobile/admin/payment-reports`, {
         headers: authHeaders(),
       });
 

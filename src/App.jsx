@@ -14,8 +14,8 @@ function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [memberInfo, setMemberInfo] = useState(null);
+
   useEffect(() => {
-  const checkLoginStatus = () => {
     const savedUser = localStorage.getItem("zhu_mobile_user");
 
     if (!savedUser) return;
@@ -27,88 +27,73 @@ function App() {
       setPage("home");
     } catch (err) {
       console.error(err);
+      localStorage.removeItem("zhu_mobile_token");
       localStorage.removeItem("zhu_mobile_user");
       localStorage.removeItem("zhu_mobile_account");
     }
-  };
+  }, []);
 
-  checkLoginStatus();
-}, []);
-
-  
-
-  const login = async (creator = false) => {
-  if (!email || !password) {
-    alert("請輸入 Email / 帳號與密碼");
-    return;
-  }
-
-  try {
-    const response = await fetch(`${API_BASE}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        account: email,
-        password,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      alert(result.detail || "登入失敗");
+  const login = async () => {
+    if (!email || !password) {
+      alert("請輸入 Email / 帳號與密碼");
       return;
     }
 
-    localStorage.setItem("zhu_mobile_token", result.access_token);
+    try {
+      const response = await fetch(`${API_BASE}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          account: email,
+          password,
+        }),
+      });
 
-    const data = {
-      account: result.username,
-      plan: result.plan,
-      days_left: result.days_left,
-      label: result.plan_label,
-      allowed: true,
-      is_creator: result.is_creator,
-    };
+      const result = await response.json();
 
-    localStorage.setItem("zhu_mobile_user", JSON.stringify(data));
-    localStorage.setItem("zhu_mobile_account", result.username);
+      if (!response.ok) {
+        alert(result.detail || "登入失敗");
+        return;
+      }
 
-    setMemberInfo(data);
-    setIsCreator(result.is_creator);
-    setPage("home");
-  } catch (err) {
-    console.error(err);
-    alert("連線失敗");
-  }
-};
+      localStorage.setItem("zhu_mobile_token", result.access_token);
 
-const logout = () => {
-  localStorage.removeItem("zhu_mobile_token");
-  localStorage.removeItem("zhu_mobile_user");
-  localStorage.removeItem("zhu_mobile_account");
+      const data = {
+        account: result.username || email,
+        plan: result.plan || result.plan_type || "-",
+        days_left: result.days_left ?? 0,
+        label: result.plan_label || result.label || "會員",
+        allowed: true,
+        is_creator: Boolean(result.is_creator),
+      };
 
-  setEmail("");
-  setPassword("");
-  setIsCreator(false);
-  setMemberInfo(null);
-  setPage("login");
-};
+      localStorage.setItem("zhu_mobile_user", JSON.stringify(data));
+      localStorage.setItem("zhu_mobile_account", data.account);
 
-const register = () => {
-  if (!agreed) {
-    setRegisterMsg("請先勾選同意免責聲明");
-    return;
-  }
+      setMemberInfo(data);
+      setIsCreator(Boolean(data.is_creator));
+      setPage("home");
+    } catch (err) {
+      console.error(err);
+      alert("連線失敗");
+    }
+  };
 
-  setRegisterMsg("註冊成功，已啟用免費試用一個月");
+  const logout = () => {
+    localStorage.removeItem("zhu_mobile_token");
+    localStorage.removeItem("zhu_mobile_user");
+    localStorage.removeItem("zhu_mobile_account");
 
-  setTimeout(() => {
-    setPage("home");
-  }, 900);
-};
+    setEmail("");
+    setPassword("");
+    setIsCreator(false);
+    setMemberInfo(null);
+    setPage("login");
+  };
+
+  const register = () => {
     if (!agreed) {
       setRegisterMsg("請先勾選同意免責聲明");
       return;
@@ -155,11 +140,7 @@ const register = () => {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <button onClick={() => login(false)}>一般會員登入</button>
-
-          <button className="creatorBtn" onClick={() => login(true)}>
-            創作者最高權限登入測試
-          </button>
+          <button onClick={login}>會員登入</button>
 
           <p className="link" onClick={() => setPage("register")}>
             還沒有帳號？前往註冊
@@ -180,21 +161,14 @@ const register = () => {
             <h3>🎁 免費試用一個月</h3>
             <p>
               新會員完成註冊後，可免費試用 ZHU STOCK APP 一個月。
-              試用期間可體驗手機網頁版功能，後續訂閱狀態將與電腦版會員系統同步。
+              試用期間可體驗手機網頁版功能。
             </p>
           </div>
 
           <div className="notice">
             <h3>免責聲明</h3>
-            <p>
-              本系統僅供資料整理、技術分析與研究參考，不構成任何投資建議、
-              理財建議、招攬或推薦買賣。
-            </p>
-            <p>所有投資決策、下單行為與盈虧結果，均由使用者自行判斷並自行承擔。</p>
-            <p>
-              本系統不保證任何分析結果、技術訊號、選股條件之正確性、
-              即時性與可獲利性。
-            </p>
+            <p>本系統僅供資料整理、技術分析與研究參考，不構成任何投資建議。</p>
+            <p>所有投資決策與盈虧結果，均由使用者自行承擔。</p>
           </div>
 
           <label className="checkbox">
@@ -225,10 +199,7 @@ const register = () => {
       {page === "member" && <MemberPage setPage={setPage} />}
       {page === "referral" && <ReferralPage />}
       {page === "subscribe" && (
-        <SubscribePage
-          showBankInfo={showBankInfo}
-          setShowBankInfo={setShowBankInfo}
-        />
+        <SubscribePage showBankInfo={showBankInfo} setShowBankInfo={setShowBankInfo} />
       )}
       {page === "admin" && isCreator && <AdminPage />}
 
@@ -265,11 +236,10 @@ function HomePage({ setPage, isCreator, memberInfo }) {
     <>
       <section className="hero">
         <h2>今日分析中心</h2>
-<p>
-  會員狀態：
-  {memberInfo?.label ||
-    (memberInfo?.allowed ? "可使用" : "已到期")}
-</p>
+        <p>
+          會員狀態：
+          {memberInfo?.label || (memberInfo?.allowed ? "可使用" : "已到期")}
+        </p>
       </section>
 
       <section className="card-grid">
@@ -309,22 +279,8 @@ function StockListPage({ title, type }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadStocks = async () => {
-      try {
- setData(
-  type === "bullish"
-    ? bullishStocks
-    : bearishStocks
-);
-      } catch (err) {
-        console.error(err);
-        
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadStocks();
+    setData(type === "bullish" ? bullishStocks : bearishStocks);
+    setLoading(false);
   }, [type]);
 
   return (
@@ -332,7 +288,6 @@ function StockListPage({ title, type }) {
       <h2>{title}</h2>
 
       {loading && <p>資料讀取中...</p>}
-
       {!loading && data.length === 0 && <p>目前沒有資料</p>}
 
       {data.map((s) => (
@@ -410,11 +365,55 @@ function ReferralPage() {
 }
 
 function SubscribePage({ showBankInfo, setShowBankInfo }) {
-
   const [planType, setPlanType] = useState("");
   const [payerName, setPayerName] = useState("");
   const [last5, setLast5] = useState("");
   const [amount, setAmount] = useState("");
+
+  const submitPaymentReport = async () => {
+    const token = localStorage.getItem("zhu_mobile_token");
+
+    if (!token) {
+      alert("請重新登入");
+      return;
+    }
+
+    if (!planType || !payerName || !last5 || !amount) {
+      alert("請完整填寫付款資料");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/payments/report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          plan_type: planType,
+          amount: Number(amount),
+          transfer_last5: last5,
+          payer_name: payerName,
+          transfer_time: new Date().toISOString(),
+          note: "",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.detail || "送出失敗");
+        return;
+      }
+
+      alert(data.message || "付款審核已送出");
+    } catch (err) {
+      console.error(err);
+      alert("連線失敗");
+    }
+  };
+
   return (
     <section className="panel pageWithNav">
       <h2>訂閱方案</h2>
@@ -443,9 +442,7 @@ function SubscribePage({ showBankInfo, setShowBankInfo }) {
       </div>
 
       {!showBankInfo && (
-        <button onClick={() => setShowBankInfo(true)}>
-          我同意，顯示匯款帳號
-        </button>
+        <button onClick={() => setShowBankInfo(true)}>我同意，顯示匯款帳號</button>
       )}
 
       {showBankInfo && (
@@ -467,55 +464,30 @@ function SubscribePage({ showBankInfo, setShowBankInfo }) {
           </div>
 
           <input
-  placeholder="選擇訂閱方案（月 / 半年 / 年）"
-  value={planType}
-  onChange={(e) => setPlanType(e.target.value)}
-/>
+            placeholder="選擇訂閱方案 monthly / quarterly / yearly"
+            value={planType}
+            onChange={(e) => setPlanType(e.target.value)}
+          />
 
-<input
-  placeholder="匯款銀行"
-  value={payerName}
-  onChange={(e) => setPayerName(e.target.value)}
-/>
+          <input
+            placeholder="匯款銀行 / 付款人"
+            value={payerName}
+            onChange={(e) => setPayerName(e.target.value)}
+          />
 
-<input
-  placeholder="匯款末五碼"
-  value={last5}
-  onChange={(e) => setLast5(e.target.value)}
-/>
+          <input
+            placeholder="匯款末五碼"
+            value={last5}
+            onChange={(e) => setLast5(e.target.value)}
+          />
 
-<input
-  placeholder="匯款金額"
-  value={amount}
-  onChange={(e) => setAmount(e.target.value)}
-/>
+          <input
+            placeholder="匯款金額"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
 
-          <button
-  onClick={async () => {
-  const token = localStorage.getItem("zhu_mobile_token");
-
-  const res = await fetch(`${API_BASE}/payments/report`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      plan_type: planType,
-      amount: Number(amount),
-      transfer_last5: last5,
-      payer_name: payerName,
-      transfer_time: new Date().toISOString(),
-      note: "",
-    }),
-  });
-
-  const data = await res.json();
-  alert(data.message);
-}}
->
-  送出付款審核
-</button>
+          <button onClick={submitPaymentReport}>送出付款審核</button>
         </>
       )}
     </section>
@@ -523,176 +495,220 @@ function SubscribePage({ showBankInfo, setShowBankInfo }) {
 }
 
 function AdminPage() {
-  const demoUsers = [
-    {
-      id: 1,
-      username: "admin",
-      email: "admin@example.com",
-      plan_type: "creator",
-      subscription_status: "active",
-      days_left: 999,
-      is_active: true,
-    },
-    {
-      id: 2,
-      username: "test_user",
-      email: "test@example.com",
-      plan_type: "monthly",
-      subscription_status: "active",
-      days_left: 15,
-      is_active: true,
-    },
-  ];
-
   const [adminUsers, setAdminUsers] = useState([]);
-const [adminPage, setAdminPage] = useState("");
-const [paymentStatus, setPaymentStatus] = useState("待審核");
+  const [paymentReports, setPaymentReports] = useState([]);
+  const [adminPage, setAdminPage] = useState("");
 
- const loadAdminUsers = async () => {
-  const token = localStorage.getItem("zhu_mobile_token");
+  const authHeaders = () => {
+    const token = localStorage.getItem("zhu_mobile_token");
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  };
 
-  const response = await fetch(
-    `${API_BASE}/admin/users`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+  const loadAdminUsers = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/admin/users`, {
+        headers: authHeaders(),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.detail || "讀取會員失敗");
+        return;
+      }
+
+      setAdminUsers(data.items || []);
+    } catch (err) {
+      console.error(err);
+      alert("讀取會員失敗");
     }
-  );
+  };
 
-  const data = await response.json();
+  const loadPaymentReports = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/admin/payment-reports`, {
+        headers: authHeaders(),
+      });
 
-  setAdminUsers(data.items || []);
-};
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.detail || "讀取付款審核失敗");
+        return;
+      }
+
+      setPaymentReports(data.items || []);
+    } catch (err) {
+      console.error(err);
+      alert("讀取付款審核失敗");
+    }
+  };
+
+  const approvePayment = async (id) => {
+    try {
+      const response = await fetch(`${API_BASE}/admin/approve-payment-report/${id}`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.detail || "審核失敗");
+        return;
+      }
+
+      alert(data.message || "付款已核准");
+      loadPaymentReports();
+      loadAdminUsers();
+    } catch (err) {
+      console.error(err);
+      alert("審核失敗");
+    }
+  };
+
+  const rejectPayment = async (id) => {
+    try {
+      const response = await fetch(`${API_BASE}/admin/reject-payment-report/${id}`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.detail || "退回失敗");
+        return;
+      }
+
+      alert(data.message || "付款已退回");
+      loadPaymentReports();
+    } catch (err) {
+      console.error(err);
+      alert("退回失敗");
+    }
+  };
 
   return (
     <section className="panel pageWithNav">
       <h2>👑 創作者最高權限</h2>
 
       <div
-  className="adminItem"
-  onClick={() => setAdminPage("payment")}
->
-  付款審核
-</div>
-
-  <div
-  className="adminItem"
-  onClick={() => {
-    loadAdminUsers();
-    setAdminPage("member");
-  }}
->
-  會員管理
-</div>
+        className="adminItem"
+        onClick={() => {
+          setAdminPage("payment");
+          loadPaymentReports();
+        }}
+      >
+        付款審核
+      </div>
 
       <div
         className="adminItem"
-        onClick={() => alert("推薦組織圖功能待重建")}
+        onClick={() => {
+          setAdminPage("member");
+          loadAdminUsers();
+        }}
       >
+        會員管理
+      </div>
+
+      <div className="adminItem" onClick={() => alert("推薦組織圖功能待重建")}>
         推薦組織圖
       </div>
 
-      <div
-        className="adminItem"
-        onClick={() => alert("用戶回饋功能待重建")}
-      >
+      <div className="adminItem" onClick={() => alert("用戶回饋功能待重建")}>
         用戶回饋
       </div>
 
-      <div
-        className="adminItem"
-        onClick={() => alert("手機版資料目前使用網頁版獨立資料")}
-      >
+      <div className="adminItem" onClick={() => alert("手機版資料目前使用網頁版獨立資料")}>
         手機版資料同步狀態
       </div>
 
-    {adminPage === "payment" && (
-  <div className="adminList">
-    <h3>付款審核</h3>
+      {adminPage === "payment" && (
+        <div className="adminList">
+          <h3>付款審核（{paymentReports.length}）</h3>
 
-    {[
-  {
-    id: 1,
-    username: "test001",
-    plan_type: "monthly",
-    transfer_last5: "12345",
-    amount: 2888,
-    status: paymentStatus,
-  },
-].map((r) => (
-  <div className="adminUserCard" key={r.id}>
-    <div>帳號：{r.username}</div>
-    <div>方案：{r.plan_type}</div>
-    <div>匯款後五碼：{r.transfer_last5}</div>
-    <div>金額：{r.amount}</div>
-    <div>狀態：{r.status}</div>
+          {paymentReports.length === 0 && <p>目前沒有付款回報</p>}
 
-      <button
-  className="adminBtn"
-  onClick={() => setPaymentStatus("已通過")}
->
-  審核通過
-</button>
-      <button
-  className="adminBtn"
-  onClick={() => setPaymentStatus("已退回")}
->
-  退回申請
-</button>
-    </div>
-))}
+          {paymentReports.map((r) => (
+            <div className="adminUserCard" key={r.id}>
+              <div>帳號：{r.username}</div>
+              <div>Email：{r.email}</div>
+              <div>方案：{r.plan_type}</div>
+              <div>匯款後五碼：{r.transfer_last5 || "-"}</div>
+              <div>金額：{r.amount}</div>
+              <div>付款人：{r.payer_name || "-"}</div>
+              <div>狀態：{r.status}</div>
+              <div>
+                建立日：
+                {r.created_at ? new Date(r.created_at).toLocaleString("zh-TW") : "-"}
+              </div>
 
-  </div>
-)}
+              <button className="adminBtn" onClick={() => approvePayment(r.id)}>
+                審核通過
+              </button>
 
-{adminUsers.length > 0 && (
+              <button className="adminBtn" onClick={() => rejectPayment(r.id)}>
+                退回申請
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {adminPage === "member" && (
         <div className="adminList">
           <h3>會員列表（{adminUsers.length}）</h3>
 
+          {adminUsers.length === 0 && <p>目前沒有會員資料</p>}
+
           {adminUsers.map((u) => (
             <div className="adminUserCard" key={u.id}>
-             <div>帳號：{u.username}</div>
-<div>姓名：{u.full_name || "-"}</div>
-<div>Email：{u.email}</div>
-<div>手機：{u.phone || "-"}</div>
-<div>方案：{u.plan_type}</div>
-<div>狀態：{u.subscription_status}</div>
-<div>剩餘天數：{u.days_left}</div>
-<div>
-到期日：
-{u.subscription_end_at
- ? new Date(u.subscription_end_at).toLocaleDateString("zh-TW")
- : "-"}
-</div>
+              <div>帳號：{u.username}</div>
+              <div>姓名：{u.full_name || "-"}</div>
+              <div>Email：{u.email}</div>
+              <div>手機：{u.phone || "-"}</div>
+              <div>方案：{u.plan_type}</div>
+              <div>狀態：{u.subscription_status}</div>
+              <div>剩餘天數：{u.days_left}</div>
+              <div>
+                到期日：
+                {u.subscription_end_at
+                  ? new Date(u.subscription_end_at).toLocaleDateString("zh-TW")
+                  : "-"}
+              </div>
+              <div>
+                註冊日：
+                {u.created_at ? new Date(u.created_at).toLocaleDateString("zh-TW") : "-"}
+              </div>
 
-<div>
-註冊日：
-{u.created_at
- ? new Date(u.created_at).toLocaleDateString("zh-TW")
- : "-"}
-</div>
               <button
-  onClick={async () => {
-    const token = localStorage.getItem("zhu_mobile_token");
+                onClick={async () => {
+                  const response = await fetch(`${API_BASE}/admin/deactivate-user`, {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                      account: u.username,
+                      is_active: !u.is_active,
+                    }),
+                  });
 
-    await fetch(`${API_BASE}/admin/deactivate-user`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        account: u.username,
-        is_active: !u.is_active,
-      }),
-    });
+                  const data = await response.json();
 
-    loadAdminUsers();
-  }}
->
-  {u.is_active ? "停用會員" : "啟用會員"}
-</button>
+                  if (!response.ok) {
+                    alert(data.detail || "操作失敗");
+                    return;
+                  }
+
+                  loadAdminUsers();
+                }}
+              >
+                {u.is_active ? "停用會員" : "啟用會員"}
+              </button>
             </div>
           ))}
         </div>

@@ -370,6 +370,11 @@ function ReferralPage() {
 }
 
 function SubscribePage({ showBankInfo, setShowBankInfo }) {
+
+  const [planType, setPlanType] = useState("");
+  const [payerName, setPayerName] = useState("");
+  const [last5, setLast5] = useState("");
+  const [amount, setAmount] = useState("");
   return (
     <section className="panel pageWithNav">
       <h2>訂閱方案</h2>
@@ -421,15 +426,53 @@ function SubscribePage({ showBankInfo, setShowBankInfo }) {
             </div>
           </div>
 
-          <input placeholder="選擇訂閱方案（月 / 半年 / 年）" />
-          <input placeholder="匯款銀行" />
-          <input placeholder="匯款末五碼" />
-          <input placeholder="匯款金額" />
+          <input
+  placeholder="選擇訂閱方案（月 / 半年 / 年）"
+  value={planType}
+  onChange={(e) => setPlanType(e.target.value)}
+/>
+
+<input
+  placeholder="匯款銀行"
+  value={payerName}
+  onChange={(e) => setPayerName(e.target.value)}
+/>
+
+<input
+  placeholder="匯款末五碼"
+  value={last5}
+  onChange={(e) => setLast5(e.target.value)}
+/>
+
+<input
+  placeholder="匯款金額"
+  value={amount}
+  onChange={(e) => setAmount(e.target.value)}
+/>
 
           <button
-  onClick={() => {
-    alert("付款審核已送出");
-  }}
+  onClick={async () => {
+  const token = localStorage.getItem("zhu_mobile_token");
+
+  const res = await fetch(`${API_BASE}/payments/report`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      plan_type: planType,
+      amount: Number(amount),
+      transfer_last5: last5,
+      payer_name: payerName,
+      transfer_time: new Date().toISOString(),
+      note: "",
+    }),
+  });
+
+  const data = await res.json();
+  alert(data.message);
+}}
 >
   送出付款審核
 </button>
@@ -528,12 +571,22 @@ const [paymentStatus, setPaymentStatus] = useState("待審核");
   <div className="adminList">
     <h3>付款審核</h3>
 
-    <div className="adminUserCard">
-      <div>帳號：test001</div>
-      <div>方案：月訂閱</div>
-      <div>匯款後五碼：12345</div>
-      <div>金額：2888</div>
-      <div>狀態：{paymentStatus}</div>
+    {[
+  {
+    id: 1,
+    username: "test001",
+    plan_type: "monthly",
+    transfer_last5: "12345",
+    amount: 2888,
+    status: paymentStatus,
+  },
+].map((r) => (
+  <div className="adminUserCard" key={r.id}>
+    <div>帳號：{r.username}</div>
+    <div>方案：{r.plan_type}</div>
+    <div>匯款後五碼：{r.transfer_last5}</div>
+    <div>金額：{r.amount}</div>
+    <div>狀態：{r.status}</div>
 
       <button
   className="adminBtn"
@@ -549,9 +602,12 @@ const [paymentStatus, setPaymentStatus] = useState("待審核");
 </button>
     </div>
   </div>
+))}
+
+  </div>
 )}
-      
-      {adminUsers.length > 0 && (
+
+{adminUsers.length > 0 && (
         <div className="adminList">
           <h3>會員列表（{adminUsers.length}）</h3>
 

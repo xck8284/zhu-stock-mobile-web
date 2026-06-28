@@ -541,7 +541,7 @@ function AdminPage() {
     try {
       const token = localStorage.getItem("zhu_mobile_token");
 
-const data = await adminFetch("/mobile/admin/payment-reports", token);
+const data = await adminFetch("/admin/payment-reports", token);
 
 setPaymentReports(data.items || []);
     } catch (err) {

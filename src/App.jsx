@@ -689,6 +689,30 @@ setPaymentReports((data.items || []).filter((r) => r.status === "pending"));
                 {u.created_at ? new Date(u.created_at).toLocaleDateString("zh-TW") : "-"}
               </div>
 
+              <div className="adminEditBox">
+  <select defaultValue={u.plan_type}>
+    <option value="trial">trial</option>
+    <option value="monthly">monthly</option>
+    <option value="quarterly">quarterly</option>
+    <option value="yearly">yearly</option>
+    <option value="manual">manual</option>
+  </select>
+
+  <input
+    type="date"
+    defaultValue={u.subscription_end_at ? u.subscription_end_at.substring(0, 10) : ""}
+  />
+
+  <input
+    type="number"
+    defaultValue={u.days_left || 0}
+  />
+
+  <button className="adminBtn">
+    儲存會員設定
+  </button>
+</div>
+
               <button
                 onClick={async () => {
                   const response = await fetch(`${API_BASE}/admin/deactivate-user`, {

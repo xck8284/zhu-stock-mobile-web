@@ -35,40 +35,80 @@ function App() {
   checkLoginStatus();
 }, []);
 
+  
+
   const login = async (creator = false) => {
-    if (!email || !password) {
-      alert("請輸入 Email / 帳號與密碼");
+  if (!email || !password) {
+    alert("請輸入 Email / 帳號與密碼");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        account: email,
+        password,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      alert(result.detail || "登入失敗");
       return;
     }
 
+    localStorage.setItem("zhu_mobile_token", result.access_token);
+
     const data = {
-      account: email,
-      plan: "月訂閱",
-      days_left: 15,
-      label: "月訂閱（剩餘 15 天）",
+      account: result.username,
+      plan: result.plan,
+      days_left: result.days_left,
+      label: result.plan_label,
       allowed: true,
-      is_creator: creator,
+      is_creator: result.is_creator,
     };
 
     localStorage.setItem("zhu_mobile_user", JSON.stringify(data));
-    localStorage.setItem("zhu_mobile_account", email);
+    localStorage.setItem("zhu_mobile_account", result.username);
 
     setMemberInfo(data);
-    setIsCreator(Boolean(data.is_creator));
+    setIsCreator(result.is_creator);
     setPage("home");
-  };
+  } catch (err) {
+    console.error(err);
+    alert("連線失敗");
+  }
+};
 
-  const logout = () => {
+const logout = () => {
+  localStorage.removeItem("zhu_mobile_token");
   localStorage.removeItem("zhu_mobile_user");
   localStorage.removeItem("zhu_mobile_account");
 
   setEmail("");
   setPassword("");
   setIsCreator(false);
+  setMemberInfo(null);
   setPage("login");
 };
 
-  const register = () => {
+const register = () => {
+  if (!agreed) {
+    setRegisterMsg("請先勾選同意免責聲明");
+    return;
+  }
+
+  setRegisterMsg("註冊成功，已啟用免費試用一個月");
+
+  setTimeout(() => {
+    setPage("home");
+  }, 900);
+};
     if (!agreed) {
       setRegisterMsg("請先勾選同意免責聲明");
       return;

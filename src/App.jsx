@@ -543,7 +543,7 @@ function AdminPage() {
 
 const data = await adminFetch("/admin/payment-reports", token);
 
-setPaymentReports(data.items || []);
+setPaymentReports((data.items || []).filter((r) => r.status === "pending"));
     } catch (err) {
       console.error(err);
       alert("讀取付款審核失敗");

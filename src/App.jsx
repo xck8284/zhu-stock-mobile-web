@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import { bullishStocks, bearishStocks } from "./analysisData";
+import { adminFetch } from "./mobileApi";
 
 const API_BASE = "https://zhu-stock-app.onrender.com";
 
@@ -538,18 +539,11 @@ function AdminPage() {
 
   const loadPaymentReports = async () => {
     try {
-      const response = await fetch(`${API_BASE}/mobile/admin/payment-reports`, {
-        headers: authHeaders(),
-      });
+      const token = localStorage.getItem("zhu_mobile_token");
 
-      const data = await response.json();
+const data = await adminFetch("/mobile/admin/payment-reports", token);
 
-      if (!response.ok) {
-        alert(data.detail || "讀取付款審核失敗");
-        return;
-      }
-
-      setPaymentReports(data.items || []);
+setPaymentReports(data.items || []);
     } catch (err) {
       console.error(err);
       alert("讀取付款審核失敗");

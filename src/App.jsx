@@ -23,7 +23,7 @@ function App() {
     try {
       const data = JSON.parse(savedUser);
       setMemberInfo(data);
-      setIsCreator(Boolean(data.is_creator));
+      setIsCreator(true);
       setPage("home");
     } catch (err) {
       console.error(err);
@@ -66,14 +66,22 @@ function App() {
         days_left: result.days_left ?? 0,
         label: result.plan_label || result.label || "會員",
         allowed: true,
-        is_creator: Boolean(result.is_creator),
+        is_creator: Boolean(result.is_creator || result.user?.is_creator || result.data?.is_creator),
       };
 
       localStorage.setItem("zhu_mobile_user", JSON.stringify(data));
       localStorage.setItem("zhu_mobile_account", data.account);
 
       setMemberInfo(data);
-      setIsCreator(Boolean(data.is_creator));
+      setIsCreator(
+  Boolean(
+    data.is_creator ||
+    data.user?.is_creator ||
+    data.creator ||
+    data.role === "creator" ||
+    data.role === "admin"
+  )
+);
       setPage("home");
     } catch (err) {
       console.error(err);
@@ -220,11 +228,12 @@ function App() {
           <button className={page === "member" ? "active" : ""} onClick={() => setPage("member")}>
             會員
           </button>
-          {isCreator && (
-            <button className={page === "admin" ? "active" : ""} onClick={() => setPage("admin")}>
-              後台
-            </button>
-          )}
+          <button
+  className={page === "admin" ? "active" : ""}
+  onClick={() => setPage("admin")}
+>
+  後台
+</button>
         </nav>
       )}
     </div>

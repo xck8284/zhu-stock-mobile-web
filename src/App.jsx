@@ -538,17 +538,18 @@ function AdminPage() {
   };
 
   const loadPaymentReports = async () => {
-    try {
-      const token = localStorage.getItem("zhu_mobile_token");
+  try {
+    const token = localStorage.getItem("zhu_mobile_token");
+    const data = await adminFetch("/admin/payment-reports", token);
 
-const data = await adminFetch("/admin/payment-reports", token);
+    console.log("付款審核資料：", data);
 
-setPaymentReports((data.items || []).filter((r) => r.status === "pending"));
-    } catch (err) {
-      console.error(err);
-      alert("讀取付款審核失敗");
-    }
-  };
+    setPaymentReports(data.items || data || []);
+  } catch (err) {
+    console.error(err);
+    alert("讀取付款審核失敗");
+  }
+};
 
   const approvePayment = async (id) => {
     try {

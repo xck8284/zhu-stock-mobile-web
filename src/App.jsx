@@ -1,9 +1,54 @@
 import { useEffect, useState } from "react";
 import "./App.css";
-import { bullishStocks, bearishStocks } from "./analysisData";
-import { adminFetch } from "./mobileApi";
+import {
+  fetchWebAnalysisStatus,
+  fetchWebStockList,
+  fetchWebWarrants,
+  runWebAnalysisRequest,
+} from "./webAnalysis";
 
 const API_BASE = "https://zhu-stock-app.onrender.com";
+
+function getToken() {
+  return localStorage.getItem("zhu_mobile_token");
+}
+
+function authHeaders(json = true) {
+  const headers = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (json) headers["Content-Type"] = "application/json";
+  return headers;
+}
+
+function parseError(data) {
+  if (typeof data?.detail === "string") return data.detail;
+  if (data?.message) return data.message;
+  if (Array.isArray(data?.detail)) {
+    return data.detail.map((item) => item.msg).join("，");
+  }
+  return "操作失敗";
+}
+
+function getMemberStatusLabel(info) {
+  if (!info) return "未知";
+  if (info.label) return info.label;
+  if (info.license_label) return info.license_label;
+
+  const status = info.subscription_status;
+  if (status === "paid" || status === "subscribed" || status === "vip") return "已訂閱";
+  if (status === "trial") return "免費試用中";
+  if (info.trial_active) return "免費試用中";
+  if (info.is_paid) return "已訂閱";
+  return "已到期";
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString("zh-TW");
+}
 
 function App() {
   const [page, setPage] = useState("login");
@@ -11,30 +56,135 @@ function App() {
   const [agreed, setAgreed] = useState(false);
   const [showBankInfo, setShowBankInfo] = useState(false);
   const [registerMsg, setRegisterMsg] = useState("");
+  const [registerStep, setRegisterStep] = useState("form");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [memberInfo, setMemberInfo] = useState(null);
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem("zhu_mobile_user");
+  const [regUsername, setRegUsername] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regConfirm, setRegConfirm] = useState("");
+  const [regPhone, setRegPhone] = useState("");
+  const [regCode, setRegCode] = useState("");
 
-    if (!savedUser) return;
+  const [analysisMeta, setAnalysisMeta] = useState(null);
+  const [analysisRunning, setAnalysisRunning] = useState(false);
+
+  const loadAnalysisStatus = async () => {
+    if (!getToken()) {
+      const local = await fetchWebAnalysisStatus(API_BASE, authHeaders);
+      if (local) setAnalysisMeta(local);
+      return;
+    }
+
+    const data = await fetchWebAnalysisStatus(API_BASE, authHeaders);
+    if (data) setAnalysisMeta(data);
+  };
+
+  const runWebAnalysis = async () => {
+    if (!getToken()) {
+      alert("請先登入");
+      setPage("login");
+      return;
+    }
+
+    setAnalysisRunning(true);
 
     try {
-      const data = JSON.parse(savedUser);
-      setMemberInfo(data);
-      setIsCreator(true);
-      setPage("home");
+      const result = await runWebAnalysisRequest(API_BASE, authHeaders);
+
+      if (result.ok) {
+        setAnalysisMeta(result.data);
+        const modeText =
+          result.mode === "server"
+            ? result.data?.job_status === "running"
+              ? "（雲端更新中）"
+              : "（雲端週K策略）"
+            : "";
+        const extraNote = result.message ? `\n${result.message}` : "";
+        alert(
+          `網頁版分析${result.data?.job_status === "running" ? "進行中" : "完成"}${modeText}\n資料來源：${result.data.market || "雲端自動分析"}\n結算日：${result.data.settle_date || "—"}\n更新時間：${result.data.updated_at || "—"}\n看多：${result.data.bullish_count ?? 0} 檔\n看空：${result.data.bearish_count ?? 0} 檔\n權證：${result.data.warrant_count ?? 0} 筆${extraNote}`
+        );
+      } else {
+        alert(result.message || "分析失敗，無法取得台股資料");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("分析失敗");
+    } finally {
+      setAnalysisRunning(false);
+    }
+  };
+
+  const refreshMemberInfo = async (account) => {
+    const savedAccount = account || localStorage.getItem("zhu_mobile_account");
+    if (!savedAccount && !getToken()) return null;
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/license/status?account=${encodeURIComponent(savedAccount || "")}`,
+        { headers: authHeaders(false) }
+      );
+      const data = await response.json();
+
+      if (response.ok) {
+        setMemberInfo((prev) => ({ ...(prev || {}), ...data }));
+        return data;
+      }
     } catch (err) {
       console.error(err);
-      localStorage.removeItem("zhu_mobile_token");
-      localStorage.removeItem("zhu_mobile_user");
-      localStorage.removeItem("zhu_mobile_account");
     }
+
+    return null;
+  };
+
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      const savedAccount = localStorage.getItem("zhu_mobile_account");
+      if (!savedAccount) return;
+
+      const data = await refreshMemberInfo(savedAccount);
+      if (!data) {
+        localStorage.removeItem("zhu_mobile_user");
+        localStorage.removeItem("zhu_mobile_account");
+        localStorage.removeItem("zhu_mobile_token");
+        return;
+      }
+
+      const savedUser = localStorage.getItem("zhu_mobile_user");
+      if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser);
+          setIsCreator(Boolean(parsed.user?.is_creator || parsed.is_creator));
+        } catch {
+          setIsCreator(false);
+        }
+      }
+
+      setPage("home");
+      loadAnalysisStatus();
+    };
+
+    checkLoginStatus();
   }, []);
 
-  const login = async () => {
+  useEffect(() => {
+    if (page === "home" && getToken()) {
+      loadAnalysisStatus();
+    }
+  }, [page]);
+
+  useEffect(() => {
+    if (analysisMeta?.job_status !== "running" || !getToken()) return undefined;
+    const timer = setInterval(() => {
+      loadAnalysisStatus();
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [analysisMeta?.job_status]);
+
+  const login = async (creator = false) => {
     if (!email || !password) {
       alert("請輸入 Email / 帳號與密碼");
       return;
@@ -43,76 +193,134 @@ function App() {
     try {
       const response = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: authHeaders(),
         body: JSON.stringify({
           account: email,
           password,
         }),
       });
 
-      const result = await response.json();
+      const data = await response.json();
 
-      if (!response.ok) {
-        alert(result.detail || "登入失敗");
-        return;
+      if (response.ok) {
+        localStorage.setItem("zhu_mobile_user", JSON.stringify(data));
+        localStorage.setItem("zhu_mobile_account", email);
+        localStorage.setItem("zhu_mobile_token", data.access_token);
+
+        setMemberInfo(data);
+        setIsCreator(Boolean(data.user?.is_creator) || creator);
+        await refreshMemberInfo(email);
+        await loadAnalysisStatus();
+        setPage("home");
+      } else {
+        alert(parseError(data) || "登入失敗");
       }
-
-      localStorage.setItem("zhu_mobile_token", result.access_token);
-
-      const data = {
-        account: result.username || email,
-        plan: result.plan || result.plan_type || "-",
-        days_left: result.days_left ?? 0,
-        label: result.plan_label || result.label || "會員",
-        allowed: true,
-        is_creator: Boolean(result.is_creator || result.user?.is_creator || result.data?.is_creator),
-      };
-
-      localStorage.setItem("zhu_mobile_user", JSON.stringify(data));
-      localStorage.setItem("zhu_mobile_account", data.account);
-
-      setMemberInfo(data);
-      setIsCreator(
-  Boolean(
-    data.is_creator ||
-    data.user?.is_creator ||
-    data.creator ||
-    data.role === "creator" ||
-    data.role === "admin"
-  )
-);
-      setPage("home");
-    } catch (err) {
-      console.error(err);
-      alert("連線失敗");
+    } catch (error) {
+      console.error(error);
+      alert("伺服器連線失敗");
     }
   };
 
   const logout = () => {
-    localStorage.removeItem("zhu_mobile_token");
     localStorage.removeItem("zhu_mobile_user");
     localStorage.removeItem("zhu_mobile_account");
+    localStorage.removeItem("zhu_mobile_token");
 
     setEmail("");
     setPassword("");
-    setIsCreator(false);
     setMemberInfo(null);
+    setIsCreator(false);
     setPage("login");
   };
 
-  const register = () => {
+  const sendRegisterCode = async () => {
     if (!agreed) {
       setRegisterMsg("請先勾選同意免責聲明");
       return;
     }
 
-    setRegisterMsg("註冊成功，已啟用免費試用一個月");
+    if (!regUsername || !regEmail || !regPassword || !regConfirm) {
+      setRegisterMsg("請完整填寫帳號、Email、密碼");
+      return;
+    }
 
-    setTimeout(() => {
-      setPage("home");
-    }, 900);
+    if (regPassword !== regConfirm) {
+      setRegisterMsg("密碼與確認密碼不一致");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/auth/send-register-code`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          username: regUsername,
+          email: regEmail,
+          password: regPassword,
+          confirm_password: regConfirm,
+          phone: regPhone,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setRegisterStep("code");
+        setRegisterMsg(
+          data.dev_code
+            ? `驗證碼已寄出（測試碼：${data.dev_code}）`
+            : "驗證碼已寄到 Email，請查收"
+        );
+      } else {
+        setRegisterMsg(parseError(data));
+      }
+    } catch (error) {
+      console.error(error);
+      setRegisterMsg("伺服器連線失敗");
+    }
+  };
+
+  const verifyRegister = async () => {
+    if (!regCode) {
+      setRegisterMsg("請輸入 Email 驗證碼");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/auth/verify-register-code`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          username: regUsername,
+          email: regEmail,
+          password: regPassword,
+          confirm_password: regConfirm,
+          phone: regPhone,
+          code: regCode,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem("zhu_mobile_user", JSON.stringify(data));
+        localStorage.setItem("zhu_mobile_account", regEmail);
+        localStorage.setItem("zhu_mobile_token", data.access_token);
+
+        setEmail(regEmail);
+        setPassword(regPassword);
+        setMemberInfo(data);
+        setIsCreator(false);
+        setRegisterMsg("註冊成功，已啟用免費試用");
+        await refreshMemberInfo(regEmail);
+        setTimeout(() => setPage("home"), 600);
+      } else {
+        setRegisterMsg(parseError(data));
+      }
+    } catch (error) {
+      console.error(error);
+      setRegisterMsg("伺服器連線失敗");
+    }
   };
 
   const isLoggedIn = page !== "login" && page !== "register";
@@ -149,7 +357,11 @@ function App() {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <button onClick={login}>會員登入</button>
+          <button onClick={() => login(false)}>一般會員登入</button>
+
+          <button className="creatorBtn" onClick={() => login(true)}>
+            創作者最高權限登入
+          </button>
 
           <p className="link" onClick={() => setPage("register")}>
             還沒有帳號？前往註冊
@@ -161,17 +373,45 @@ function App() {
         <section className="panel">
           <h2>註冊會員</h2>
 
-          <input placeholder="Email" />
-          <input placeholder="密碼" type="password" />
-          <input placeholder="確認密碼" type="password" />
-          <input placeholder="推薦碼（選填）" />
+          <input
+            placeholder="帳號"
+            value={regUsername}
+            onChange={(e) => setRegUsername(e.target.value)}
+          />
+          <input
+            placeholder="Email"
+            value={regEmail}
+            onChange={(e) => setRegEmail(e.target.value)}
+          />
+          <input
+            placeholder="密碼"
+            type="password"
+            value={regPassword}
+            onChange={(e) => setRegPassword(e.target.value)}
+          />
+          <input
+            placeholder="確認密碼"
+            type="password"
+            value={regConfirm}
+            onChange={(e) => setRegConfirm(e.target.value)}
+          />
+          <input
+            placeholder="手機（選填）"
+            value={regPhone}
+            onChange={(e) => setRegPhone(e.target.value)}
+          />
+
+          {registerStep === "code" && (
+            <input
+              placeholder="Email 驗證碼"
+              value={regCode}
+              onChange={(e) => setRegCode(e.target.value)}
+            />
+          )}
 
           <div className="trialBox">
             <h3>🎁 免費試用一個月</h3>
-            <p>
-              新會員完成註冊後，可免費試用 ZHU STOCK APP 一個月。
-              試用期間可體驗手機網頁版功能。
-            </p>
+            <p>新會員完成註冊後，可免費試用手機網頁版，會員帳號全平台共用。</p>
           </div>
 
           <div className="notice">
@@ -191,9 +431,15 @@ function App() {
 
           {registerMsg && <div className="message">{registerMsg}</div>}
 
-          <button disabled={!agreed} onClick={register}>
-            註冊並開始免費試用一個月
-          </button>
+          {registerStep === "form" ? (
+            <button disabled={!agreed} onClick={sendRegisterCode}>
+              寄送 Email 驗證碼
+            </button>
+          ) : (
+            <button disabled={!agreed} onClick={verifyRegister}>
+              完成註冊
+            </button>
+          )}
 
           <p className="link" onClick={() => setPage("login")}>
             已有帳號？返回登入
@@ -201,11 +447,22 @@ function App() {
         </section>
       )}
 
-      <HomePage setPage={setPage} isCreator={isCreator} memberInfo={memberInfo} />
+      {page === "home" && (
+        <HomePage
+          setPage={setPage}
+          isCreator={isCreator}
+          memberInfo={memberInfo}
+          analysisMeta={analysisMeta}
+          onRunAnalysis={runWebAnalysis}
+          analysisRunning={analysisRunning}
+        />
+      )}
       {page === "bullish" && <StockListPage title="📈 看多清單" type="bullish" />}
       {page === "bearish" && <StockListPage title="📉 看空清單" type="bearish" />}
       {page === "warrant" && <WarrantPage />}
-      {page === "member" && <MemberPage setPage={setPage} />}
+      {page === "member" && (
+        <MemberPage setPage={setPage} memberInfo={memberInfo} onRefresh={refreshMemberInfo} />
+      )}
       {page === "referral" && <ReferralPage />}
       {page === "subscribe" && (
         <SubscribePage showBankInfo={showBankInfo} setShowBankInfo={setShowBankInfo} />
@@ -229,27 +486,42 @@ function App() {
           <button className={page === "member" ? "active" : ""} onClick={() => setPage("member")}>
             會員
           </button>
-          <button
-  className={page === "admin" ? "active" : ""}
-  onClick={() => setPage("admin")}
->
-  後台
-</button>
+          {isCreator && (
+            <button className={page === "admin" ? "active" : ""} onClick={() => setPage("admin")}>
+              後台
+            </button>
+          )}
         </nav>
       )}
     </div>
   );
 }
 
-function HomePage({ setPage, isCreator, memberInfo }) {
+function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis, analysisRunning }) {
   return (
     <>
       <section className="hero">
         <h2>今日分析中心</h2>
-        <p>
-          會員狀態：
-          {memberInfo?.label || (memberInfo?.allowed ? "可使用" : "已到期")}
-        </p>
+        <p>會員狀態：{getMemberStatusLabel(memberInfo)}</p>
+        {memberInfo?.days_left != null && (
+          <p>剩餘天數：{memberInfo.days_left} 天</p>
+        )}
+        {analysisMeta?.updated_at && (
+          <p>
+            最後更新：{analysisMeta.updated_at}
+            {analysisMeta.settle_date ? `｜結算日 ${analysisMeta.settle_date}` : ""}
+            {analysisMeta.market ? `｜${analysisMeta.market}` : ""}
+          </p>
+        )}
+        <p className="subText">每個交易日收盤後約 16:05 自動更新（週K策略）。也可手動立即更新。</p>
+        {analysisMeta?.job_status === "running" && (
+          <p className="subText">雲端分析進行中，完成後清單會自動更新…</p>
+        )}
+        <button onClick={onRunAnalysis} disabled={analysisRunning || analysisMeta?.job_status === "running"}>
+          {analysisRunning || analysisMeta?.job_status === "running"
+            ? "分析中（約 1～3 分鐘）..."
+            : "立即更新分析"}
+        </button>
       </section>
 
       <section className="card-grid">
@@ -285,69 +557,151 @@ function HomePage({ setPage, isCreator, memberInfo }) {
 }
 
 function StockListPage({ title, type }) {
-  const [data, setData] = useState([]);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    setData(type === "bullish" ? bullishStocks : bearishStocks);
-    setLoading(false);
+    const loadStocks = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const { items } = await fetchWebStockList(type, API_BASE, authHeaders);
+        setItems(Array.isArray(items) ? items : []);
+      } catch (err) {
+        console.error(err);
+        setError("讀取失敗，請稍後再試");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStocks();
   }, [type]);
+
+  const formatBias = (bias) => {
+    if (bias === null || bias === undefined || bias === "") return "-";
+    const text = String(bias);
+    return text.includes("%") ? text : `${text}%`;
+  };
 
   return (
     <section className="panel pageWithNav">
       <h2>{title}</h2>
 
-      {loading && <p>資料讀取中...</p>}
-      {!loading && data.length === 0 && <p>目前沒有資料</p>}
-
-      {data.map((s) => (
-        <div className="stockItem" key={s.stock_id || s.code}>
-          <strong>
-            {s.stock_id || s.code} {s.name}
-          </strong>
-          <span>{s.stars || s.star}</span>
-          <small>StrongScore：{s.strong_score || s.score}</small>
-          <small>乖離率：{s.bias}</small>
+      {loading && <div className="adminItem">載入中...</div>}
+      {error && <div className="message">{error}</div>}
+      {!loading && !error && items.length === 0 && (
+        <div className="adminItem">
+          尚無資料。每個交易日收盤後約 16:05 會自動更新；若剛收盤請稍候，或到首頁按「立即更新分析」。
         </div>
-      ))}
+      )}
+
+      {items.map((s, index) => {
+        const code = s.stock_id || s.code || s.symbol || "-";
+        const name = s.name || "";
+        const stars = s.stars || s.star || "";
+        const score = s.strong_score ?? s.score ?? "-";
+        const bias = formatBias(s.bias);
+
+        return (
+          <div className="stockItem" key={`${code}-${index}`}>
+            <strong>
+              {code} {name}
+            </strong>
+            <span>{stars}</span>
+            <small>StrongScore：{score}</small>
+            <small>乖離率：{bias}</small>
+            {s.close != null && <small>收盤：{s.close}</small>}
+          </div>
+        );
+      })}
     </section>
   );
 }
 
 function WarrantPage() {
-  const sample = [
-    { code: "088888", name: "台積電元大購01", issuer: "元大", type: "認購" },
-    { code: "077777", name: "鴻海凱基購02", issuer: "凱基", type: "認購" },
-    { code: "066666", name: "聯發科群益購03", issuer: "群益金鼎", type: "認購" },
-  ];
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const loadWarrants = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const { items } = await fetchWebWarrants(API_BASE, authHeaders);
+        setItems(Array.isArray(items) ? items : []);
+      } catch (err) {
+        console.error(err);
+        setError("讀取失敗，請稍後再試");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadWarrants();
+  }, []);
 
   return (
     <section className="panel pageWithNav">
       <h2>🎯 權證專區</h2>
-      <p className="subText">五顆星、StrongScore ≥ 100、乖離率 &lt; 50 的標的優先觀察。</p>
+      <p className="subText">剩餘天數 90～120 天、全部發行券商；標的來自 StrongScore≥100 且 5 星看多池。</p>
 
-      {sample.map((w) => (
-        <div className="stockItem" key={w.code}>
-          <strong>
-            {w.code} {w.name}
-          </strong>
-          <span>類型：{w.type}</span>
-          <small>發行券商：{w.issuer}</small>
+      {loading && <div className="adminItem">載入中...</div>}
+      {error && <div className="message">{error}</div>}
+      {!loading && !error && items.length === 0 && (
+        <div className="adminItem">
+          尚無權證資料。每個交易日收盤後約 16:05 會自動更新；若剛收盤請稍候。
         </div>
-      ))}
+      )}
+
+      {items.map((w, index) => {
+        const code = w.code || w.stock_id || "-";
+        const name = w.name || "";
+        const issuer = w.issuer || w.broker || "-";
+        const warrantType = w.type || "-";
+
+        return (
+          <div className="stockItem" key={`${code}-${index}`}>
+            <strong>
+              {code} {name}
+            </strong>
+            <span>類型：{warrantType}</span>
+            <small>發行券商：{issuer}</small>
+          </div>
+        );
+      })}
     </section>
   );
 }
 
-function MemberPage({ setPage }) {
+function MemberPage({ setPage, memberInfo, onRefresh }) {
+  const [loading, setLoading] = useState(false);
+
+  const refresh = async () => {
+    setLoading(true);
+    await onRefresh();
+    setLoading(false);
+  };
+
   return (
     <section className="panel pageWithNav">
       <h2>會員狀態</h2>
 
-      <div className="adminItem">目前狀態：免費試用中</div>
-      <div className="adminItem">免費試用：一個月</div>
-      <div className="adminItem">訂閱期限：尚未串接</div>
-      <div className="adminItem">權證專區：尚未串接</div>
+      <div className="adminItem">目前狀態：{getMemberStatusLabel(memberInfo)}</div>
+      <div className="adminItem">帳號：{memberInfo?.account || memberInfo?.user?.username || "—"}</div>
+      <div className="adminItem">Email：{memberInfo?.email || memberInfo?.user?.email || "—"}</div>
+      <div className="adminItem">方案：{memberInfo?.plan_type || "—"}</div>
+      <div className="adminItem">剩餘天數：{memberInfo?.days_left ?? "—"} 天</div>
+      <div className="adminItem">試用到期：{formatDate(memberInfo?.trial_end_at)}</div>
+      <div className="adminItem">訂閱到期：{formatDate(memberInfo?.subscription_end_at)}</div>
+
+      <button onClick={refresh} disabled={loading}>
+        {loading ? "更新中..." : "刷新會員狀態"}
+      </button>
 
       <div className="adminItem" onClick={() => setPage("subscribe")}>
         前往訂閱方案
@@ -375,52 +729,48 @@ function ReferralPage() {
 }
 
 function SubscribePage({ showBankInfo, setShowBankInfo }) {
-  const [planType, setPlanType] = useState("");
+  const [selectedPlan, setSelectedPlan] = useState("monthly");
+  const [transferLast5, setTransferLast5] = useState("");
   const [payerName, setPayerName] = useState("");
-  const [last5, setLast5] = useState("");
   const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [message, setMessage] = useState("");
 
-  const submitPaymentReport = async () => {
-    const token = localStorage.getItem("zhu_mobile_token");
+  const plans = [
+    { id: "monthly", label: "月訂閱", price: 2888 },
+    { id: "quarterly", label: "半年方案", price: 14888 },
+    { id: "yearly", label: "年方案", price: 28888 },
+  ];
 
-    if (!token) {
-      alert("請重新登入");
-      return;
-    }
-
-    if (!planType || !payerName || !last5 || !amount) {
-      alert("請完整填寫付款資料");
+  const submitPayment = async () => {
+    if (!transferLast5) {
+      setMessage("請填寫匯款末五碼");
       return;
     }
 
     try {
-      const res = await fetch(`${API_BASE}/payments/report`, {
+      const response = await fetch(`${API_BASE}/payments/report`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: authHeaders(),
         body: JSON.stringify({
-          plan_type: planType,
-          amount: Number(amount),
-          transfer_last5: last5,
+          plan_type: selectedPlan,
+          amount: amount ? Number(amount) : plans.find((p) => p.id === selectedPlan)?.price,
+          transfer_last5: transferLast5,
           payer_name: payerName,
-          transfer_time: new Date().toISOString(),
-          note: "",
+          note,
         }),
       });
 
-      const data = await res.json();
+      const data = await response.json();
 
-      if (!res.ok) {
-        alert(data.detail || "送出失敗");
-        return;
+      if (response.ok) {
+        setMessage(data.message || "付款回報已送出，待管理員審核");
+      } else {
+        setMessage(parseError(data));
       }
-
-      alert(data.message || "付款審核已送出");
-    } catch (err) {
-      console.error(err);
-      alert("連線失敗");
+    } catch (error) {
+      console.error(error);
+      setMessage("伺服器連線失敗");
     }
   };
 
@@ -428,27 +778,21 @@ function SubscribePage({ showBankInfo, setShowBankInfo }) {
     <section className="panel pageWithNav">
       <h2>訂閱方案</h2>
 
-      <div className="planCard">
-        <h3>月訂閱</h3>
-        <p>NT$ 2888</p>
-      </div>
-
-      <div className="planCard">
-        <h3>半年方案</h3>
-        <p>NT$ 14888</p>
-      </div>
-
-      <div className="planCard">
-        <h3>年方案</h3>
-        <p>NT$ 28888</p>
-      </div>
+      {plans.map((plan) => (
+        <div
+          key={plan.id}
+          className={`planCard ${selectedPlan === plan.id ? "selected" : ""}`}
+          onClick={() => setSelectedPlan(plan.id)}
+        >
+          <h3>{plan.label}</h3>
+          <p>NT$ {plan.price.toLocaleString()}</p>
+        </div>
+      ))}
 
       <div className="notice">
         <h3>付款前聲明</h3>
         <p>本系統為資訊分析輔助工具，不保證任何獲利與投資成果。</p>
-        <p>系統不會自動開通，管理員確認收款後才會啟用會員權限。</p>
-        <p>若於免費試用期間提前訂閱，正式會員時間將於試用結束後開始計算。</p>
-        <p>付款後請填寫匯款銀行、末五碼與金額，送出後由管理員人工審核。</p>
+        <p>管理員確認收款後才會啟用會員權限。</p>
       </div>
 
       {!showBankInfo && (
@@ -474,30 +818,29 @@ function SubscribePage({ showBankInfo, setShowBankInfo }) {
           </div>
 
           <input
-            placeholder="選擇訂閱方案 monthly / quarterly / yearly"
-            value={planType}
-            onChange={(e) => setPlanType(e.target.value)}
-          />
-
-          <input
-            placeholder="匯款銀行 / 付款人"
+            placeholder="匯款人姓名（選填）"
             value={payerName}
             onChange={(e) => setPayerName(e.target.value)}
           />
-
           <input
             placeholder="匯款末五碼"
-            value={last5}
-            onChange={(e) => setLast5(e.target.value)}
+            value={transferLast5}
+            onChange={(e) => setTransferLast5(e.target.value)}
           />
-
           <input
             placeholder="匯款金額"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
+          <input
+            placeholder="備註（選填）"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
 
-          <button onClick={submitPaymentReport}>送出付款審核</button>
+          {message && <div className="message">{message}</div>}
+
+          <button onClick={submitPayment}>送出付款審核</button>
         </>
       )}
     </section>
@@ -507,30 +850,21 @@ function SubscribePage({ showBankInfo, setShowBankInfo }) {
 function AdminPage() {
   const [adminUsers, setAdminUsers] = useState([]);
   const [paymentReports, setPaymentReports] = useState([]);
-  const [adminPage, setAdminPage] = useState("");
-
-  const authHeaders = () => {
-    const token = localStorage.getItem("zhu_mobile_token");
-    return {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    };
-  };
+  const [view, setView] = useState("menu");
 
   const loadAdminUsers = async () => {
     try {
       const response = await fetch(`${API_BASE}/admin/users`, {
-        headers: authHeaders(),
+        headers: authHeaders(false),
       });
-
       const data = await response.json();
 
-      if (!response.ok) {
-        alert(data.detail || "讀取會員失敗");
-        return;
+      if (response.ok) {
+        setAdminUsers(data.items || []);
+        setView("users");
+      } else {
+        alert(parseError(data) || "讀取會員失敗");
       }
-
-      setAdminUsers(data.items || []);
     } catch (err) {
       console.error(err);
       alert("讀取會員失敗");
@@ -538,205 +872,136 @@ function AdminPage() {
   };
 
   const loadPaymentReports = async () => {
-  try {
-    const token = localStorage.getItem("zhu_mobile_token");
-    const data = await adminFetch("/admin/payment-reports", token);
-
-    console.log("付款審核資料：", data);
-
-    setPaymentReports(data.items || data || []);
-  } catch (err) {
-    console.error(err);
-    alert("讀取付款審核失敗");
-  }
-};
-
-  const approvePayment = async (id) => {
     try {
-      const response = await fetch(`${API_BASE}/admin/approve-payment-report/${id}`, {
-        method: "POST",
-        headers: authHeaders(),
+      const response = await fetch(`${API_BASE}/admin/payment-reports`, {
+        headers: authHeaders(false),
       });
-
       const data = await response.json();
 
-      if (!response.ok) {
-        alert(data.detail || "審核失敗");
-        return;
+      if (response.ok) {
+        setPaymentReports(data.items || []);
+        setView("payments");
+      } else {
+        alert(parseError(data) || "讀取付款資料失敗");
       }
-
-      alert(data.message || "付款已核准");
-      loadPaymentReports();
-      loadAdminUsers();
     } catch (err) {
       console.error(err);
-      alert("審核失敗");
+      alert("讀取付款資料失敗");
     }
   };
 
-  const rejectPayment = async (id) => {
+  const toggleUserActive = async (user) => {
     try {
-      const response = await fetch(`${API_BASE}/admin/reject-payment-report/${id}`, {
+      const response = await fetch(`${API_BASE}/admin/deactivate-user`, {
         method: "POST",
         headers: authHeaders(),
+        body: JSON.stringify({
+          account: user.username || user.email,
+          is_active: !user.is_active,
+        }),
       });
 
       const data = await response.json();
 
-      if (!response.ok) {
-        alert(data.detail || "退回失敗");
-        return;
+      if (response.ok) {
+        alert(data.message || "操作完成");
+        loadAdminUsers();
+      } else {
+        alert(parseError(data) || "操作失敗");
       }
-
-      alert(data.message || "付款已退回");
-      loadPaymentReports();
     } catch (err) {
-      console.error(err);
-      alert("退回失敗");
+      alert("操作失敗");
+    }
+  };
+
+  const reviewPayment = async (reportId, action) => {
+    const endpoint =
+      action === "approve"
+        ? `${API_BASE}/admin/approve-payment-report/${reportId}`
+        : `${API_BASE}/admin/reject-payment-report/${reportId}?note=網頁版拒絕`;
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: authHeaders(false),
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(data.message || "審核完成");
+        loadPaymentReports();
+      } else {
+        alert(parseError(data) || "審核失敗");
+      }
+    } catch (err) {
+      alert("審核失敗");
     }
   };
 
   return (
     <section className="panel pageWithNav">
-      <h2>👑 創作者最高權限</h2>
+      <h2>👑 創作者後台</h2>
 
-      <div
-        className="adminItem"
-        onClick={() => {
-          setAdminPage("payment");
-          loadPaymentReports();
-        }}
-      >
-        付款審核
-      </div>
+      {view === "menu" && (
+        <>
+          <div className="adminItem" onClick={loadPaymentReports}>
+            付款審核
+          </div>
+          <div className="adminItem" onClick={loadAdminUsers}>
+            會員管理
+          </div>
+          <div className="adminItem" onClick={() => alert("推薦組織圖功能開發中")}>
+            推薦組織圖
+          </div>
+        </>
+      )}
 
-      <div
-        className="adminItem"
-        onClick={() => {
-          setAdminPage("member");
-          loadAdminUsers();
-        }}
-      >
-        會員管理
-      </div>
+      {view !== "menu" && (
+        <button className="backBtn" onClick={() => setView("menu")}>
+          返回後台選單
+        </button>
+      )}
 
-      <div className="adminItem" onClick={() => alert("推薦組織圖功能待重建")}>
-        推薦組織圖
-      </div>
-
-      <div className="adminItem" onClick={() => alert("用戶回饋功能待重建")}>
-        用戶回饋
-      </div>
-
-      <div className="adminItem" onClick={() => alert("手機版資料目前使用網頁版獨立資料")}>
-        手機版資料同步狀態
-      </div>
-
-      {adminPage === "payment" && (
+      {view === "users" && adminUsers.length > 0 && (
         <div className="adminList">
-          <h3>付款審核（{paymentReports.length}）</h3>
+          <h3>會員列表（{adminUsers.length}）</h3>
 
-          {paymentReports.length === 0 && <p>目前沒有付款回報</p>}
-
-          {paymentReports.map((r) => (
-            <div className="adminUserCard" key={r.id}>
-              <div>帳號：{r.username}</div>
-              <div>Email：{r.email}</div>
-              <div>方案：{r.plan_type}</div>
-              <div>匯款後五碼：{r.transfer_last5 || "-"}</div>
-              <div>金額：{r.amount}</div>
-              <div>付款人：{r.payer_name || "-"}</div>
-              <div>狀態：{r.status}</div>
-              <div>
-                建立日：
-                {r.created_at ? new Date(r.created_at).toLocaleString("zh-TW") : "-"}
-              </div>
-
-              <button className="adminBtn" onClick={() => approvePayment(r.id)}>
-                審核通過
-              </button>
-
-              <button className="adminBtn" onClick={() => rejectPayment(r.id)}>
-                退回申請
+          {adminUsers.map((u) => (
+            <div className="adminUserCard" key={u.id}>
+              <div>帳號：{u.username}</div>
+              <div>Email：{u.email}</div>
+              <div>方案：{u.plan_type}</div>
+              <div>狀態：{u.subscription_status}</div>
+              <div>剩餘天數：{u.days_left}</div>
+              <button onClick={() => toggleUserActive(u)}>
+                {u.is_active ? "停用會員" : "啟用會員"}
               </button>
             </div>
           ))}
         </div>
       )}
 
-      {adminPage === "member" && (
+      {view === "payments" && (
         <div className="adminList">
-          <h3>會員列表（{adminUsers.length}）</h3>
+          <h3>付款審核（{paymentReports.length}）</h3>
 
-          {adminUsers.length === 0 && <p>目前沒有會員資料</p>}
+          {paymentReports.length === 0 && (
+            <div className="adminItem">目前沒有待審資料</div>
+          )}
 
-          {adminUsers.map((u) => (
-            <div className="adminUserCard" key={u.id}>
-              <div>帳號：{u.username}</div>
-              <div>姓名：{u.full_name || "-"}</div>
-              <div>Email：{u.email}</div>
-              <div>手機：{u.phone || "-"}</div>
-              <div>方案：{u.plan_type}</div>
-              <div>狀態：{u.subscription_status}</div>
-              <div>剩餘天數：{u.days_left}</div>
-              <div>
-                到期日：
-                {u.subscription_end_at
-                  ? new Date(u.subscription_end_at).toLocaleDateString("zh-TW")
-                  : "-"}
-              </div>
-              <div>
-                註冊日：
-                {u.created_at ? new Date(u.created_at).toLocaleDateString("zh-TW") : "-"}
-              </div>
-
-              <div className="adminEditBox">
-  <select defaultValue={u.plan_type}>
-    <option value="trial">trial</option>
-    <option value="monthly">monthly</option>
-    <option value="quarterly">quarterly</option>
-    <option value="yearly">yearly</option>
-    <option value="manual">manual</option>
-  </select>
-
-  <input
-    type="date"
-    defaultValue={u.subscription_end_at ? u.subscription_end_at.substring(0, 10) : ""}
-  />
-
-  <input
-    type="number"
-    defaultValue={u.days_left || 0}
-  />
-
-  <button className="adminBtn">
-    儲存會員設定
-  </button>
-</div>
-
-              <button
-                onClick={async () => {
-                  const response = await fetch(`${API_BASE}/admin/deactivate-user`, {
-                    method: "POST",
-                    headers: authHeaders(),
-                    body: JSON.stringify({
-                      account: u.username,
-                      is_active: !u.is_active,
-                    }),
-                  });
-
-                  const data = await response.json();
-
-                  if (!response.ok) {
-                    alert(data.detail || "操作失敗");
-                    return;
-                  }
-
-                  loadAdminUsers();
-                }}
-              >
-                {u.is_active ? "停用會員" : "啟用會員"}
-              </button>
+          {paymentReports.map((report) => (
+            <div className="adminUserCard" key={report.id}>
+              <div>帳號：{report.username}</div>
+              <div>方案：{report.plan_type}</div>
+              <div>金額：{report.amount}</div>
+              <div>末五碼：{report.transfer_last5}</div>
+              <div>狀態：{report.status}</div>
+              {report.status === "pending" && (
+                <div className="adminActions">
+                  <button onClick={() => reviewPayment(report.id, "approve")}>核准</button>
+                  <button onClick={() => reviewPayment(report.id, "reject")}>拒絕</button>
+                </div>
+              )}
             </div>
           ))}
         </div>

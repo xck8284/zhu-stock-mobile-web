@@ -549,7 +549,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
             {analysisMeta.bearish_count != null ? `｜看空 ${analysisMeta.bearish_count} 檔` : ""}
           </p>
         )}
-        <p className="subText">每個交易日收盤後約 16:05 自動更新（週K策略）。也可手動立即更新。</p>
+        <p className="subText">每個交易日收盤後約 16:05 自動更新。看多＝趨勢突破守穩池（同桌面版）；權證另需 StrongScore≥100、5 星。</p>
 
         {isAnalyzing && (
           <div className="analysisProgressBox">
@@ -706,7 +706,7 @@ function WarrantPage() {
   return (
     <section className="panel pageWithNav">
       <h2>🎯 權證專區</h2>
-      <p className="subText">剩餘天數 90～120 天、全部發行券商；標的來自 StrongScore≥100 且 5 星看多池。</p>
+      <p className="subText">看多：週20MA＋趨勢突破守穩（同桌面版）。權證另篩 StrongScore≥100、5 星、剩餘 90～120 天。</p>
 
       {loading && <div className="adminItem">載入中...</div>}
       {error && <div className="message">{error}</div>}

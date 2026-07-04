@@ -554,7 +554,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
             {analysisMeta.bearish_count != null ? `｜看空 ${analysisMeta.bearish_count} 檔` : ""}
           </p>
         )}
-        <p className="subText">每個交易日收盤後約 16:05 自動更新。看多＝趨勢突破守穩池（同桌面版）；權證另需 StrongScore≥100、5 星。</p>
+        <p className="subText">每個交易日收盤後約 16:05 自動更新。看多/看空清單對齊桌面版（含上櫃補強、星等與 Alarm）。</p>
 
         {isAnalyzing && (
           <div className="analysisProgressBox">
@@ -685,16 +685,26 @@ function StockListPage({ title, type, memberInfo, setPage }) {
         const stars = s.stars || s.star || "";
         const score = s.strong_score ?? s.score ?? "-";
         const bias = formatBias(s.bias);
+        const market = s.market || "";
+        const industry = s.industry || "";
+        const shortAlarm = s.short_alarm || "";
+        const longAlarm = s.long_alarm || "";
 
         return (
           <div className="stockItem" key={`${code}-${index}`}>
             <strong>
               {code} {name}
             </strong>
+            {market && <span>{market}{industry ? `｜${industry}` : ""}</span>}
             <span>{stars}</span>
-            <small>StrongScore：{score}</small>
+            {type === "bullish" && <small>StrongScore：{score}</small>}
             <small>乖離率：{bias}</small>
-            {s.close != null && <small>收盤：{s.close}</small>}
+            {shortAlarm === "是" && <small className="alarm">短線Alarm</small>}
+            {longAlarm === "是" && <small className="alarm">長線Alarm</small>}
+            {s.settle_date && <small>週結：{s.settle_date}</small>}
+            {s.memory_note && s.memory_note.includes("上櫃") && (
+              <small>上櫃補強</small>
+            )}
           </div>
         );
       })}

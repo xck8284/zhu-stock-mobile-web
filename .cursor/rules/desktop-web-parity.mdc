@@ -23,8 +23,8 @@ alwaysApply: true
 ## 功能對齊清單（未完成項須持續補齊）
 
 ### 選股策略
-- [x] 看多（training pool：週20MA + 趨勢突破守穩 + 週量≥1萬）
-- [x] 看空（bearish training pool）
+- [x] 看多（CLIENT_BULLISH：training pool + 上櫃補強 + mix 排序）
+- [x] 看空（CLIENT_BEARISH：空方 pool + 星等排序）
 - [x] 權證（StrongScore≥100、5星、90～120天；全市場資料只抓一次）
 - [ ] 多方關鍵K / 空方關鍵K
 - [ ] 上櫃看多補充池（OTC supplement）

@@ -198,6 +198,10 @@ button:disabled {
   display: block;
   margin-bottom: 4px;
 }
+
+.stockItem .alarm {
+  color: #f85149;
+}
 .bottomNav {
   position: fixed;
   bottom: 0;

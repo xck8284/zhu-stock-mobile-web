@@ -528,7 +528,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
   const elapsed = Math.max(localElapsed, serverElapsed);
   const progress = Math.max(
     serverProgress,
-    isAnalyzing ? Math.min(95, Math.max(5, Math.round((elapsed / 480) * 100))) : 0
+    isAnalyzing ? Math.min(95, Math.max(5, Math.round((elapsed / 180) * 100))) : 0
   );
   const orphanRunning = analysisMeta?.job_status === "running" && !analysisMeta?.job_started_at;
   const stuck = isAnalyzing && (orphanRunning || (elapsed >= 15 && serverProgress === 0 && !analysisMeta?.job_started_at));
@@ -541,11 +541,12 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
         {memberInfo?.days_left != null && (
           <p>剩餘天數：{memberInfo.days_left} 天</p>
         )}
-        {analysisMeta?.updated_at && analysisMeta?.job_status !== "running" && (
+        {analysisMeta?.updated_at && (
           <p>
             最後更新：{analysisMeta.updated_at}
             {analysisMeta.settle_date ? `｜結算日 ${analysisMeta.settle_date}` : ""}
-            {analysisMeta.market ? `｜${analysisMeta.market}` : ""}
+            {analysisMeta.bullish_count != null ? `｜看多 ${analysisMeta.bullish_count} 檔` : ""}
+            {analysisMeta.bearish_count != null ? `｜看空 ${analysisMeta.bearish_count} 檔` : ""}
           </p>
         )}
         <p className="subText">每個交易日收盤後約 16:05 自動更新（週K策略）。也可手動立即更新。</p>
@@ -560,7 +561,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
               <div className="analysisProgressBar" style={{ width: `${Math.max(progress, 5)}%` }} />
             </div>
             <p className="subText">
-              已耗時 {formatElapsed(elapsed)}（完整分析約 5～10 分鐘，請勿關閉頁面）
+              已耗時 {formatElapsed(elapsed)}（正常約 1～3 分鐘，請勿關閉頁面）
             </p>
             {stuck && (
               <p className="message">分析似乎卡住了，請按下方「強制重新啟動」。</p>
@@ -568,7 +569,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
           </div>
         )}
 
-        {analysisMeta?.job_status === "failed" && (
+        {analysisMeta?.job_status === "failed" && !analysisMeta?.has_data && (
           <p className="message">{analysisMeta.job_error || analysisMeta.job_message || "上次分析失敗，請重新啟動"}</p>
         )}
 

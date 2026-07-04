@@ -119,7 +119,7 @@ function App() {
               ? "\n（權證若為 0，請稍後刷新權證頁）"
               : "";
           alert(
-            `分析完成\n結算日：${final.data?.settle_date || "—"}\n看多：${final.data?.bullish_count ?? 0} 檔\n看空：${final.data?.bearish_count ?? 0} 檔\n權證：${final.data?.warrant_count ?? 0} 筆${warrantNote}`
+            `分析完成\n結算日：${final.data?.settle_date || "—"}\n看多：${final.data?.bullish_count ?? 0} 檔\n多方關鍵K：${final.data?.bullish_keyk_count ?? 0} 檔\n看空：${final.data?.bearish_count ?? 0} 檔\n空方關鍵K：${final.data?.bearish_keyk_count ?? 0} 檔\n權證：${final.data?.warrant_count ?? 0} 筆${warrantNote}`
           );
           loadAnalysisStatus();
         } else if (final.message) {
@@ -519,6 +519,12 @@ function App() {
       {page === "bearish" && (
         <StockListPage title="📉 看空清單" type="bearish" memberInfo={memberInfo} setPage={setPage} />
       )}
+      {page === "bullish-keyk" && (
+        <KeyKListPage title="🔑 多方關鍵K" type="bullish-keyk" memberInfo={memberInfo} setPage={setPage} />
+      )}
+      {page === "bearish-keyk" && (
+        <KeyKListPage title="🔑 空方關鍵K" type="bearish-keyk" memberInfo={memberInfo} setPage={setPage} />
+      )}
       {page === "warrant" && <WarrantPage memberInfo={memberInfo} setPage={setPage} />}
       {page === "member" && (
         <MemberPage setPage={setPage} memberInfo={memberInfo} onRefresh={refreshMemberInfo} />
@@ -588,13 +594,17 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
           <p>
             最後更新：{analysisMeta.updated_at}
             {analysisMeta.settle_date ? `｜結算日 ${analysisMeta.settle_date}` : ""}
-            {analysisMeta.bullish_count != null ? `｜看多 ${analysisMeta.bullish_count} 檔` : ""}
-            {analysisMeta.bearish_count != null ? `｜看空 ${analysisMeta.bearish_count} 檔` : ""}
-            {analysisMeta.warrant_count != null ? `｜權證 ${analysisMeta.warrant_count} 筆` : ""}
+          </p>
+        )}
+        {analysisMeta?.updated_at && (
+          <p className="subText">
+            看多：{analysisMeta.bullish_count ?? 0} 檔｜多方關鍵K：{analysisMeta.bullish_keyk_count ?? 0} 檔｜看空：
+            {analysisMeta.bearish_count ?? 0} 檔｜空方關鍵K：{analysisMeta.bearish_keyk_count ?? 0} 檔｜權證：
+            {analysisMeta.warrant_count ?? 0} 筆
           </p>
         )}
         <p className="subText">
-          每個交易日收盤後約 16:05 自動更新。看多＝training pool 全顯示（含上櫃補強）；權證另篩 StrongScore≥100、5 星、90～120 天。
+          選股邏輯與電腦版相同：看多＝TRAINING_POOL（週量≥1萬、趨勢突破守穩、StrongScore≥55）＋上櫃補強；多方關鍵K＝本週正式突破。
         </p>
 
         {isAnalyzing && hasPartialData && serverProgress >= 85 && (
@@ -637,12 +647,22 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
       <section className="card-grid">
         <div className="card bullish" onClick={() => setPage("bullish")}>
           <h3>📈 看多清單</h3>
-          <p>高機率強勢標的</p>
+          <p>TRAINING_POOL（同電腦版）</p>
+        </div>
+
+        <div className="card bullish" onClick={() => setPage("bullish-keyk")}>
+          <h3>🔑 多方關鍵K</h3>
+          <p>本週正式突破</p>
         </div>
 
         <div className="card bearish" onClick={() => setPage("bearish")}>
           <h3>📉 看空清單</h3>
-          <p>弱勢觀察標的</p>
+          <p>空方 TRAINING_POOL</p>
+        </div>
+
+        <div className="card bearish" onClick={() => setPage("bearish-keyk")}>
+          <h3>🔑 空方關鍵K</h3>
+          <p>本週正式跌破</p>
         </div>
 
         <div className="card warrant" onClick={() => setPage("warrant")}>
@@ -667,6 +687,10 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
 }
 
 function StockListPage({ title, type, memberInfo, setPage }) {
+  const strategyText =
+    type === "bullish"
+      ? "同電腦版 CLIENT_BULLISH：週量≥1萬張、站上週20MA（或均線多頭）、下降趨勢線突破後守穩、StrongScore≥55，並混入上櫃週K補強（最多40檔）。"
+      : "同電腦版 CLIENT_BEARISH：週量≥1萬、收盤在週20MA下、上升趨勢線跌破後守穩、BearishScore≥55。";
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -708,6 +732,7 @@ function StockListPage({ title, type, memberInfo, setPage }) {
   return (
     <section className="panel pageWithNav">
       <h2>{title}</h2>
+      <p className="subText">{strategyText}</p>
       {!loading && !error && items.length > 0 && (
         <p className="subText">共 {items.length} 檔（對齊桌面版策略）</p>
       )}
@@ -756,6 +781,87 @@ function StockListPage({ title, type, memberInfo, setPage }) {
             {s.memory_note && s.memory_note.includes("上櫃") && (
               <small>上櫃補強</small>
             )}
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+function KeyKListPage({ title, type, memberInfo, setPage }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const strategyText =
+    type === "bullish-keyk"
+      ? "同電腦版 CLIENT_BULLISH_KEYK：本週正式突破下降趨勢線＋盤整區（STRICT_BREAKOUT）。"
+      : "同電腦版 CLIENT_BEARISH_KEYK：本週正式跌破上升趨勢線（BEARISH_KEY_BREAKDOWN）。";
+
+  const licenseBlocked =
+    memberInfo && memberInfo.allowed === false && !memberInfo.is_creator;
+
+  useEffect(() => {
+    if (licenseBlocked) {
+      setLoading(false);
+      setError(getMemberStatusLabel(memberInfo));
+      return;
+    }
+
+    const loadItems = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const { items } = await fetchWebStockList(type, API_BASE, authHeaders);
+        setItems(Array.isArray(items) ? items : []);
+      } catch (err) {
+        console.error(err);
+        setError(err?.message || "讀取失敗，請稍後再試");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadItems();
+  }, [type, licenseBlocked, memberInfo]);
+
+  return (
+    <section className="panel pageWithNav">
+      <h2>{title}</h2>
+      <p className="subText">{strategyText}</p>
+      {!loading && !error && items.length > 0 && (
+        <p className="subText">共 {items.length} 檔</p>
+      )}
+      {loading && <div className="adminItem">載入中...</div>}
+      {error && (
+        <div className="message">
+          {error}
+          {licenseBlocked && (
+            <div className="adminItem" onClick={() => setPage("subscribe")}>
+              前往訂閱方案
+            </div>
+          )}
+        </div>
+      )}
+      {!loading && !error && items.length === 0 && (
+        <div className="adminItem">尚無資料。請到首頁執行分析（需完整 480 天歷史）。</div>
+      )}
+      {items.map((s, index) => {
+        const code = s.stock_id || s.code || "-";
+        return (
+          <div className="stockItem" key={`${code}-${index}`}>
+            <strong>
+              {code} {s.name || ""}
+            </strong>
+            {s.market && <span>{s.market}{s.industry ? `｜${s.industry}` : ""}</span>}
+            <small>週收：{s.close ?? "-"}｜週20MA：{s.ma20 ?? "-"}</small>
+            <small>週量：{s.volume_lots ?? "-"} 張</small>
+            {s.line_distance_pct !== "" && s.line_distance_pct != null && (
+              <small>趨勢線距離：{s.line_distance_pct}%</small>
+            )}
+            {s.box_distance_pct !== "" && s.box_distance_pct != null && (
+              <small>盤整距離：{s.box_distance_pct}%</small>
+            )}
+            {s.settle_date && <small>週結：{s.settle_date}</small>}
           </div>
         );
       })}

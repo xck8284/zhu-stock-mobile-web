@@ -446,7 +446,7 @@ export function formatElapsed(seconds) {
 
 export async function waitForAnalysisComplete(apiBase, headersFn, onUpdate, options = {}) {
   const pollMs = options.pollMs || 3000;
-  const timeoutMs = options.timeoutMs || 12 * 60 * 1000;
+  const timeoutMs = options.timeoutMs || 25 * 60 * 1000;
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < timeoutMs) {
@@ -475,6 +475,6 @@ export async function waitForAnalysisComplete(apiBase, headersFn, onUpdate, opti
   return {
     ok: false,
     reason: "timeout",
-    message: "分析時間較長，請稍後再查看；若超過 12 分鐘仍無結果可重新啟動",
+    message: "分析時間較長（首次建立480天快取約15～20分鐘），請勿關閉頁面；若中斷可再按強制重新啟動",
   };
 }

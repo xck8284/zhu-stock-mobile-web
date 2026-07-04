@@ -1,0 +1,73 @@
+---
+description: 網頁版須對齊桌面版功能，兩者各自獨立運作
+alwaysApply: true
+---
+
+# 桌面版 ↔ 網頁版功能對齊（獨立部署）
+
+## 核心原則
+
+1. **行為對齊、程式獨立**：網頁版（`zhu-stock-mobile-web` + `zhu-stock-app/server`）須與桌面版（`zhustock_app/zhustock_app.py`）在業務邏輯與使用者體驗上一致，但**不得修改桌面版原始碼**。
+2. **自主迭代**：每次對話中若發現差距，應主動修正、部署、驗證，直到該項功能與桌面版一致。
+3. **桌面版為規格來源**：策略常數、篩選條件、會員規則、付款流程以桌面版為準；後端 `web_strategy.py` 與 `app.py` 為網頁版實作主體。
+
+## 參考路徑
+
+| 用途 | 桌面版（只讀參考） | 網頁版（可改） |
+|------|-------------------|----------------|
+| 選股策略 | `C:\Users\user\Desktop\zhustock_app\zhustock_app.py` | `zhu-stock-app/server/web_strategy.py` |
+| 後端 API | 同上 repo `server/app.py`（共用 Render） | `zhu-stock-app/server/app.py` |
+| 前端 UI | — | `zhu-stock-mobile-web/src/App.jsx` |
+| 自動部署 | — | `scripts/auto-push-deploy.ps1` |
+
+## 功能對齊清單（未完成項須持續補齊）
+
+### 選股策略
+- [x] 看多（training pool：週20MA + 趨勢突破守穩 + 週量≥1萬）
+- [x] 看空（bearish training pool）
+- [x] 權證（StrongScore≥100、5星、90～120天；全市場資料只抓一次）
+- [ ] 多方關鍵K / 空方關鍵K
+- [ ] 上櫃看多補充池（OTC supplement）
+- [ ] 個股詳情（星等、乖離率、趨勢記憶、意見）
+- [ ] 我的持股
+
+### 會員資格
+- [x] 註冊（email 驗證碼）、登入、試用 30 天
+- [x] 過期時鎖住分析與清單（`allowed === false`）
+- [x] 方案對齊：`halfyear`（180天）與桌面版一致
+- [ ] 忘記/重設密碼 UI
+- [ ] device_id 綁定（單裝置）
+
+### 會員審查 / 管理（creator）
+- [x] 會員列表、啟用/停用
+- [x] 付款審核（核准/拒絕）
+- [x] 待審筆數（pending_review）
+- [ ] 手動開通方案 `/admin/set-plan`
+- [ ] 贈送天數 `/admin/grant-free`
+- [ ] 重綁裝置 `/admin/rebind-device`
+- [ ] 會員詳情、匯出
+
+### 會員回饋
+- [x] `POST /feedback/submit` 後端 + DB
+- [x] 前端回饋表單
+- [x] 管理端回饋列表
+
+### 付款審核
+- [x] 會員回報匯款、管理員核准/拒絕
+- [ ] 銀行欄位、自訂拒絕原因
+- [ ] 核准後 email 通知
+
+## 策略常數（桌面版 ↔ 網頁版須一致）
+
+| 項目 | 桌面版 | 網頁版 |
+|------|--------|--------|
+| 看多清單 | training pool 全顯示 | 同左 |
+| 權證 | score≥100、5星、90～120天 | 同左 |
+| 週量 | ≥10000 張 | ≥10000 張 |
+| 權證乖離 | 桌面 fastscan 有 bias<50 | 使用者要求看多無上限；權證依桌面 |
+
+## 完成修正後
+
+1. 執行 `scripts/auto-push-deploy.ps1` 推送前後端。
+2. 簡述已對齊項目與仍待補項。
+3. 若改動策略，提醒使用者重新跑分析。

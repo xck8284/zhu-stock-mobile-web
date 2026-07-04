@@ -30,6 +30,6 @@ alwaysApply: true
 - `.env`、金鑰、credentials
 - `__pycache__/`、`node_modules/`
 
-## 可選：對話結束自動推送
+## 對話結束自動推送
 
-若要在 Agent 結束時自動執行推送，可在 `.cursor/hooks.json` 加入 `stop` hook 呼叫 `scripts/auto-push-deploy.ps1`（需本機 Cursor 設定允許）。
+已設定 `.cursor/hooks.json`：`stop` 事件會執行 `scripts/auto-push-on-stop.ps1` → `scripts/auto-push-deploy.ps1`。

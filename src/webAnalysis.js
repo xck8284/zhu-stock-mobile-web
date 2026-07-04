@@ -333,43 +333,43 @@ export function getLocalWebAnalysis() {
 }
 
 export async function fetchWebStockList(type, apiBase, headersFn) {
-  try {
-    const response = await fetch(`${apiBase}/web/${type}`, {
-      headers: headersFn(false),
-    });
+  const response = await fetch(`${apiBase}/web/${type}`, {
+    headers: headersFn(false),
+  });
+  const data = await response.json().catch(() => ({}));
 
-    if (response.ok) {
-      const data = await response.json();
-      return {
-        items: Array.isArray(data.items) ? data.items : [],
-        source: "server",
-      };
-    }
-  } catch (err) {
-    console.error(err);
+  if (response.ok) {
+    return {
+      items: Array.isArray(data.items) ? data.items : [],
+      source: "server",
+    };
   }
 
-  return { items: [], source: "none" };
+  const message =
+    typeof data?.detail === "string"
+      ? data.detail
+      : data?.message || "讀取失敗，請稍後再試";
+  throw new Error(message);
 }
 
 export async function fetchWebWarrants(apiBase, headersFn) {
-  try {
-    const response = await fetch(`${apiBase}/web/warrants`, {
-      headers: headersFn(false),
-    });
+  const response = await fetch(`${apiBase}/web/warrants`, {
+    headers: headersFn(false),
+  });
+  const data = await response.json().catch(() => ({}));
 
-    if (response.ok) {
-      const data = await response.json();
-      return {
-        items: Array.isArray(data.items) ? data.items : [],
-        source: "server",
-      };
-    }
-  } catch (err) {
-    console.error(err);
+  if (response.ok) {
+    return {
+      items: Array.isArray(data.items) ? data.items : [],
+      source: "server",
+    };
   }
 
-  return { items: [], source: "none" };
+  const message =
+    typeof data?.detail === "string"
+      ? data.detail
+      : data?.message || "讀取失敗，請稍後再試";
+  throw new Error(message);
 }
 
 export async function runWebAnalysisRequest(apiBase, headersFn, options = {}) {

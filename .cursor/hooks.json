@@ -1,0 +1,11 @@
+﻿{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/auto-push-on-stop.ps1",
+        "timeout": 120
+      }
+    ]
+  }
+}

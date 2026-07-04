@@ -481,13 +481,18 @@ function App() {
           onRunAnalysis={runWebAnalysis}
         />
       )}
-      {page === "bullish" && <StockListPage title="📈 看多清單" type="bullish" />}
-      {page === "bearish" && <StockListPage title="📉 看空清單" type="bearish" />}
-      {page === "warrant" && <WarrantPage />}
+      {page === "bullish" && (
+        <StockListPage title="📈 看多清單" type="bullish" memberInfo={memberInfo} setPage={setPage} />
+      )}
+      {page === "bearish" && (
+        <StockListPage title="📉 看空清單" type="bearish" memberInfo={memberInfo} setPage={setPage} />
+      )}
+      {page === "warrant" && <WarrantPage memberInfo={memberInfo} setPage={setPage} />}
       {page === "member" && (
         <MemberPage setPage={setPage} memberInfo={memberInfo} onRefresh={refreshMemberInfo} />
       )}
       {page === "referral" && <ReferralPage />}
+      {page === "feedback" && <FeedbackPage />}
       {page === "subscribe" && (
         <SubscribePage showBankInfo={showBankInfo} setShowBankInfo={setShowBankInfo} />
       )}
@@ -614,12 +619,21 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
   );
 }
 
-function StockListPage({ title, type }) {
+function StockListPage({ title, type, memberInfo, setPage }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const licenseBlocked =
+    memberInfo && memberInfo.allowed === false && !memberInfo.is_creator;
+
   useEffect(() => {
+    if (licenseBlocked) {
+      setLoading(false);
+      setError(getMemberStatusLabel(memberInfo));
+      return;
+    }
+
     const loadStocks = async () => {
       setLoading(true);
       setError("");
@@ -629,14 +643,14 @@ function StockListPage({ title, type }) {
         setItems(Array.isArray(items) ? items : []);
       } catch (err) {
         console.error(err);
-        setError("讀取失敗，請稍後再試");
+        setError(err?.message || "讀取失敗，請稍後再試");
       } finally {
         setLoading(false);
       }
     };
 
     loadStocks();
-  }, [type]);
+  }, [type, licenseBlocked, memberInfo]);
 
   const formatBias = (bias) => {
     if (bias === null || bias === undefined || bias === "") return "-";
@@ -649,7 +663,16 @@ function StockListPage({ title, type }) {
       <h2>{title}</h2>
 
       {loading && <div className="adminItem">載入中...</div>}
-      {error && <div className="message">{error}</div>}
+      {error && (
+        <div className="message">
+          {error}
+          {licenseBlocked && (
+            <div className="adminItem" onClick={() => setPage("subscribe")}>
+              前往訂閱方案
+            </div>
+          )}
+        </div>
+      )}
       {!loading && !error && items.length === 0 && (
         <div className="adminItem">
           尚無資料。每個交易日收盤後約 16:05 會自動更新；若剛收盤請稍候，或到首頁按「立即更新分析」。
@@ -679,12 +702,21 @@ function StockListPage({ title, type }) {
   );
 }
 
-function WarrantPage() {
+function WarrantPage({ memberInfo, setPage }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const licenseBlocked =
+    memberInfo && memberInfo.allowed === false && !memberInfo.is_creator;
+
   useEffect(() => {
+    if (licenseBlocked) {
+      setLoading(false);
+      setError(getMemberStatusLabel(memberInfo));
+      return;
+    }
+
     const loadWarrants = async () => {
       setLoading(true);
       setError("");
@@ -694,14 +726,14 @@ function WarrantPage() {
         setItems(Array.isArray(items) ? items : []);
       } catch (err) {
         console.error(err);
-        setError("讀取失敗，請稍後再試");
+        setError(err?.message || "讀取失敗，請稍後再試");
       } finally {
         setLoading(false);
       }
     };
 
     loadWarrants();
-  }, []);
+  }, [licenseBlocked, memberInfo]);
 
   return (
     <section className="panel pageWithNav">
@@ -709,7 +741,16 @@ function WarrantPage() {
       <p className="subText">看多：週20MA＋趨勢突破守穩（同桌面版）。權證另篩 StrongScore≥100、5 星、剩餘 90～120 天。</p>
 
       {loading && <div className="adminItem">載入中...</div>}
-      {error && <div className="message">{error}</div>}
+      {error && (
+        <div className="message">
+          {error}
+          {licenseBlocked && (
+            <div className="adminItem" onClick={() => setPage("subscribe")}>
+              前往訂閱方案
+            </div>
+          )}
+        </div>
+      )}
       {!loading && !error && items.length === 0 && (
         <div className="adminItem">
           尚無權證資料。每個交易日收盤後約 16:05 會自動更新；若剛收盤請稍候。
@@ -768,6 +809,73 @@ function MemberPage({ setPage, memberInfo, onRefresh }) {
       <div className="adminItem" onClick={() => setPage("referral")}>
         推薦制度
       </div>
+
+      <div className="adminItem" onClick={() => setPage("feedback")}>
+        意見回饋
+      </div>
+    </section>
+  );
+}
+
+function FeedbackPage() {
+  const [topic, setTopic] = useState("功能建議");
+  const [content, setContent] = useState("");
+  const [message, setMessage] = useState("");
+
+  const submitFeedback = async () => {
+    if (!content.trim()) {
+      setMessage("請填寫回饋內容");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/feedback/submit`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          topic,
+          content,
+          app_version: "web-mobile",
+          device_info: navigator.userAgent,
+          feedback_id: crypto.randomUUID?.() || String(Date.now()),
+        }),
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage(data.message || "回饋已送出");
+        setContent("");
+      } else {
+        setMessage(parseError(data));
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage("伺服器連線失敗");
+    }
+  };
+
+  return (
+    <section className="panel pageWithNav">
+      <h2>意見回饋</h2>
+      <p className="subText">與桌面版相同，回饋會送交管理端處理。</p>
+
+      <select value={topic} onChange={(e) => setTopic(e.target.value)}>
+        <option value="功能建議">功能建議</option>
+        <option value="操作問題">操作問題</option>
+        <option value="資料疑問">資料疑問</option>
+        <option value="其他">其他</option>
+      </select>
+
+      <textarea
+        placeholder="請描述您的問題或建議"
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        rows={6}
+      />
+
+      {message && <div className="message">{message}</div>}
+
+      <button onClick={submitFeedback}>送出回饋</button>
     </section>
   );
 }
@@ -796,7 +904,7 @@ function SubscribePage({ showBankInfo, setShowBankInfo }) {
 
   const plans = [
     { id: "monthly", label: "月訂閱", price: 2888 },
-    { id: "quarterly", label: "半年方案", price: 14888 },
+    { id: "halfyear", label: "半年方案", price: 14888 },
     { id: "yearly", label: "年方案", price: 28888 },
   ];
 
@@ -908,6 +1016,7 @@ function SubscribePage({ showBankInfo, setShowBankInfo }) {
 function AdminPage() {
   const [adminUsers, setAdminUsers] = useState([]);
   const [paymentReports, setPaymentReports] = useState([]);
+  const [feedbackReports, setFeedbackReports] = useState([]);
   const [view, setView] = useState("menu");
 
   const loadAdminUsers = async () => {
@@ -945,6 +1054,25 @@ function AdminPage() {
     } catch (err) {
       console.error(err);
       alert("讀取付款資料失敗");
+    }
+  };
+
+  const loadFeedbackReports = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/admin/feedback`, {
+        headers: authHeaders(false),
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        setFeedbackReports(data.items || []);
+        setView("feedback");
+      } else {
+        alert(parseError(data) || "讀取回饋失敗");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("讀取回饋失敗");
     }
   };
 
@@ -1008,6 +1136,9 @@ function AdminPage() {
           <div className="adminItem" onClick={loadAdminUsers}>
             會員管理
           </div>
+          <div className="adminItem" onClick={loadFeedbackReports}>
+            會員回饋
+          </div>
           <div className="adminItem" onClick={() => alert("推薦組織圖功能開發中")}>
             推薦組織圖
           </div>
@@ -1031,6 +1162,7 @@ function AdminPage() {
               <div>方案：{u.plan_type}</div>
               <div>狀態：{u.subscription_status}</div>
               <div>剩餘天數：{u.days_left}</div>
+              {u.pending_review > 0 && <div>待審付款：{u.pending_review} 筆</div>}
               <button onClick={() => toggleUserActive(u)}>
                 {u.is_active ? "停用會員" : "啟用會員"}
               </button>
@@ -1060,6 +1192,24 @@ function AdminPage() {
                   <button onClick={() => reviewPayment(report.id, "reject")}>拒絕</button>
                 </div>
               )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {view === "feedback" && (
+        <div className="adminList">
+          <h3>會員回饋（{feedbackReports.length}）</h3>
+
+          {feedbackReports.length === 0 && <div className="adminItem">目前沒有回饋</div>}
+
+          {feedbackReports.map((item) => (
+            <div className="adminUserCard" key={item.id}>
+              <div>主題：{item.topic}</div>
+              <div>帳號：{item.account || "—"}</div>
+              <div>Email：{item.email || "—"}</div>
+              <div>{item.content}</div>
+              <div>時間：{formatDate(item.created_at)}</div>
             </div>
           ))}
         </div>

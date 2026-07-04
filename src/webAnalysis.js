@@ -423,5 +423,14 @@ export async function fetchWebAnalysisStatus(apiBase, headersFn) {
     console.error(err);
   }
 
+  try {
+    const response = await fetch(`${apiBase}/web/public/status`);
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
   return null;
 }

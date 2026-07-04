@@ -42,6 +42,10 @@ body {
   margin-bottom: 20px;
 }
 
+.hero button {
+  margin-top: 14px;
+}
+
 .hero h2 {
   margin: 0 0 10px;
   font-size: 26px;
@@ -203,6 +207,12 @@ button:disabled {
   border-radius: 18px;
   margin-bottom: 14px;
   text-align: center;
+  cursor: pointer;
+}
+
+.planCard.selected {
+  border-color: #facc15;
+  box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.35);
 }
 
 .planCard h3 {
@@ -237,4 +247,25 @@ button:disabled {
   margin-top: 12px;
   text-align: center;
   font-weight: bold;
+}
+
+.backBtn {
+  width: auto;
+  background: #30363d;
+  margin-bottom: 12px;
+}
+
+.adminActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.adminActions button {
+  flex: 1;
+  width: auto;
+}
+
+.adminUserCard button {
+  margin-top: 8px;
 }

@@ -114,9 +114,14 @@ function App() {
         if (final.data) setAnalysisMeta(final.data);
 
         if (final.ok) {
+          const warrantNote =
+            (final.data?.warrant_count ?? 0) === 0 && (final.data?.bullish_count ?? 0) > 0
+              ? "\n（權證若為 0，請稍後刷新權證頁）"
+              : "";
           alert(
-            `分析完成\n結算日：${final.data?.settle_date || "—"}\n看多：${final.data?.bullish_count ?? 0} 檔\n看空：${final.data?.bearish_count ?? 0} 檔\n權證：${final.data?.warrant_count ?? 0} 筆`
+            `分析完成\n結算日：${final.data?.settle_date || "—"}\n看多：${final.data?.bullish_count ?? 0} 檔\n看空：${final.data?.bearish_count ?? 0} 檔\n權證：${final.data?.warrant_count ?? 0} 筆${warrantNote}`
           );
+          loadAnalysisStatus();
         } else if (final.message) {
           alert(final.message);
         }
@@ -563,7 +568,13 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
     isAnalyzing ? Math.min(95, Math.max(5, Math.round((elapsed / 90) * 100))) : 0
   );
   const orphanRunning = analysisMeta?.job_status === "running" && !analysisMeta?.job_started_at;
-  const stuck = isAnalyzing && (orphanRunning || (elapsed >= 15 && serverProgress === 0 && !analysisMeta?.job_started_at));
+  const stuckAtStart = isAnalyzing && (orphanRunning || (elapsed >= 90 && serverProgress <= 10));
+  const stuckAtEnd = isAnalyzing && elapsed >= 120 && serverProgress >= 85;
+  const stuck = stuckAtStart || stuckAtEnd;
+  const hasPartialData =
+    analysisMeta?.has_data ||
+    (analysisMeta?.bullish_count ?? 0) > 0 ||
+    (analysisMeta?.bearish_count ?? 0) > 0;
 
   return (
     <>
@@ -579,9 +590,16 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
             {analysisMeta.settle_date ? `｜結算日 ${analysisMeta.settle_date}` : ""}
             {analysisMeta.bullish_count != null ? `｜看多 ${analysisMeta.bullish_count} 檔` : ""}
             {analysisMeta.bearish_count != null ? `｜看空 ${analysisMeta.bearish_count} 檔` : ""}
+            {analysisMeta.warrant_count != null ? `｜權證 ${analysisMeta.warrant_count} 筆` : ""}
           </p>
         )}
-        <p className="subText">每個交易日收盤後約 16:05 自動更新。看多/看空清單對齊桌面版（含上櫃補強、星等與 Alarm）。</p>
+        <p className="subText">
+          每個交易日收盤後約 16:05 自動更新。看多＝training pool 全顯示（含上櫃補強）；權證另篩 StrongScore≥100、5 星、90～120 天。
+        </p>
+
+        {isAnalyzing && hasPartialData && serverProgress >= 85 && (
+          <p className="subText">看多/看空可能已更新，可先進入清單查看；權證整理完成後請刷新權證頁。</p>
+        )}
 
         {isAnalyzing && (
           <div className="analysisProgressBox">
@@ -596,7 +614,9 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
               已耗時 {formatElapsed(elapsed)}（快取建立後約 1 分鐘；首次可能 3～5 分鐘）
             </p>
             {stuck && (
-              <p className="message">分析似乎卡住了，請按下方「強制重新啟動」。</p>
+              <p className="message">
+                分析似乎卡住了（已 {formatElapsed(elapsed)}），請按下方「強制重新啟動」。
+              </p>
             )}
           </div>
         )}
@@ -688,6 +708,9 @@ function StockListPage({ title, type, memberInfo, setPage }) {
   return (
     <section className="panel pageWithNav">
       <h2>{title}</h2>
+      {!loading && !error && items.length > 0 && (
+        <p className="subText">共 {items.length} 檔（對齊桌面版策略）</p>
+      )}
 
       {loading && <div className="adminItem">載入中...</div>}
       {error && (
@@ -725,6 +748,7 @@ function StockListPage({ title, type, memberInfo, setPage }) {
             {market && <span>{market}{industry ? `｜${industry}` : ""}</span>}
             <span>{stars}</span>
             {type === "bullish" && <small>StrongScore：{score}</small>}
+            {type === "bearish" && <small>BearishScore：{s.bearish_score ?? score}</small>}
             <small>乖離率：{bias}</small>
             {shortAlarm === "是" && <small className="alarm">短線Alarm</small>}
             {longAlarm === "是" && <small className="alarm">長線Alarm</small>}

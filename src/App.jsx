@@ -611,7 +611,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
               <div className="analysisProgressBar" style={{ width: `${Math.max(progress, 5)}%` }} />
             </div>
             <p className="subText">
-              已耗時 {formatElapsed(elapsed)}（快取建立後約 1 分鐘；首次可能 3～5 分鐘）
+              已耗時 {formatElapsed(elapsed)}（快取建立後約 1～2 分鐘；首次補齊 480 天歷史約 8～12 分鐘）
             </p>
             {stuck && (
               <p className="message">

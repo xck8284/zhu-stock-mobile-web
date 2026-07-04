@@ -533,7 +533,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
   const elapsed = Math.max(localElapsed, serverElapsed);
   const progress = Math.max(
     serverProgress,
-    isAnalyzing ? Math.min(95, Math.max(5, Math.round((elapsed / 180) * 100))) : 0
+    isAnalyzing ? Math.min(95, Math.max(5, Math.round((elapsed / 90) * 100))) : 0
   );
   const orphanRunning = analysisMeta?.job_status === "running" && !analysisMeta?.job_started_at;
   const stuck = isAnalyzing && (orphanRunning || (elapsed >= 15 && serverProgress === 0 && !analysisMeta?.job_started_at));
@@ -566,7 +566,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
               <div className="analysisProgressBar" style={{ width: `${Math.max(progress, 5)}%` }} />
             </div>
             <p className="subText">
-              已耗時 {formatElapsed(elapsed)}（正常約 2～4 分鐘，請勿關閉頁面）
+              已耗時 {formatElapsed(elapsed)}（快取建立後約 1 分鐘；首次可能 3～5 分鐘）
             </p>
             {stuck && (
               <p className="message">分析似乎卡住了，請按下方「強制重新啟動」。</p>

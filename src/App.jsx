@@ -4,7 +4,9 @@ import {
   fetchWebAnalysisStatus,
   fetchWebStockList,
   fetchWebWarrants,
+  formatElapsed,
   runWebAnalysisRequest,
+  waitForAnalysisComplete,
 } from "./webAnalysis";
 
 const API_BASE = "https://zhu-stock-app.onrender.com";
@@ -71,6 +73,7 @@ function App() {
 
   const [analysisMeta, setAnalysisMeta] = useState(null);
   const [analysisRunning, setAnalysisRunning] = useState(false);
+  const [localElapsed, setLocalElapsed] = useState(0);
 
   const loadAnalysisStatus = async () => {
     if (!getToken()) {
@@ -83,7 +86,7 @@ function App() {
     if (data) setAnalysisMeta(data);
   };
 
-  const runWebAnalysis = async () => {
+  const runWebAnalysis = async (force = false) => {
     if (!getToken()) {
       alert("請先登入");
       setPage("login");
@@ -91,24 +94,32 @@ function App() {
     }
 
     setAnalysisRunning(true);
+    setLocalElapsed(0);
 
     try {
-      const result = await runWebAnalysisRequest(API_BASE, authHeaders);
+      const result = await runWebAnalysisRequest(API_BASE, authHeaders, { force });
 
-      if (result.ok) {
-        setAnalysisMeta(result.data);
-        const modeText =
-          result.mode === "server"
-            ? result.data?.job_status === "running"
-              ? "（雲端更新中）"
-              : "（雲端週K策略）"
-            : "";
-        const extraNote = result.message ? `\n${result.message}` : "";
-        alert(
-          `網頁版分析${result.data?.job_status === "running" ? "進行中" : "完成"}${modeText}\n資料來源：${result.data.market || "雲端自動分析"}\n結算日：${result.data.settle_date || "—"}\n更新時間：${result.data.updated_at || "—"}\n看多：${result.data.bullish_count ?? 0} 檔\n看空：${result.data.bearish_count ?? 0} 檔\n權證：${result.data.warrant_count ?? 0} 筆${extraNote}`
-        );
-      } else {
+      if (!result.ok) {
         alert(result.message || "分析失敗，無法取得台股資料");
+        return;
+      }
+
+      setAnalysisMeta(result.data);
+
+      if (result.data?.job_status === "running") {
+        const final = await waitForAnalysisComplete(API_BASE, authHeaders, (status) => {
+          setAnalysisMeta(status);
+        });
+
+        if (final.data) setAnalysisMeta(final.data);
+
+        if (final.ok) {
+          alert(
+            `分析完成\n結算日：${final.data?.settle_date || "—"}\n看多：${final.data?.bullish_count ?? 0} 檔\n看空：${final.data?.bearish_count ?? 0} 檔\n權證：${final.data?.warrant_count ?? 0} 筆`
+          );
+        } else if (final.message) {
+          alert(final.message);
+        }
       }
     } catch (error) {
       console.error(error);
@@ -177,10 +188,22 @@ function App() {
   }, [page]);
 
   useEffect(() => {
+    const analyzing = analysisRunning || analysisMeta?.job_status === "running";
+    if (!analyzing) {
+      setLocalElapsed(0);
+      return undefined;
+    }
+    const timer = setInterval(() => {
+      setLocalElapsed((sec) => sec + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [analysisRunning, analysisMeta?.job_status]);
+
+  useEffect(() => {
     if (analysisMeta?.job_status !== "running" || !getToken()) return undefined;
     const timer = setInterval(() => {
       loadAnalysisStatus();
-    }, 15000);
+    }, 3000);
     return () => clearInterval(timer);
   }, [analysisMeta?.job_status]);
 
@@ -453,8 +476,9 @@ function App() {
           isCreator={isCreator}
           memberInfo={memberInfo}
           analysisMeta={analysisMeta}
-          onRunAnalysis={runWebAnalysis}
           analysisRunning={analysisRunning}
+          localElapsed={localElapsed}
+          onRunAnalysis={runWebAnalysis}
         />
       )}
       {page === "bullish" && <StockListPage title="📈 看多清單" type="bullish" />}
@@ -497,7 +521,18 @@ function App() {
   );
 }
 
-function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis, analysisRunning }) {
+function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis, analysisRunning, localElapsed }) {
+  const isAnalyzing = analysisRunning || analysisMeta?.job_status === "running";
+  const serverProgress = Number(analysisMeta?.job_progress) || 0;
+  const serverElapsed = Number(analysisMeta?.job_elapsed_sec) || 0;
+  const elapsed = Math.max(localElapsed, serverElapsed);
+  const progress = Math.max(
+    serverProgress,
+    isAnalyzing ? Math.min(95, Math.max(5, Math.round((elapsed / 480) * 100))) : 0
+  );
+  const orphanRunning = analysisMeta?.job_status === "running" && !analysisMeta?.job_started_at;
+  const stuck = isAnalyzing && (orphanRunning || (elapsed >= 15 && serverProgress === 0 && !analysisMeta?.job_started_at));
+
   return (
     <>
       <section className="hero">
@@ -506,7 +541,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
         {memberInfo?.days_left != null && (
           <p>剩餘天數：{memberInfo.days_left} 天</p>
         )}
-        {analysisMeta?.updated_at && (
+        {analysisMeta?.updated_at && analysisMeta?.job_status !== "running" && (
           <p>
             最後更新：{analysisMeta.updated_at}
             {analysisMeta.settle_date ? `｜結算日 ${analysisMeta.settle_date}` : ""}
@@ -514,14 +549,36 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
           </p>
         )}
         <p className="subText">每個交易日收盤後約 16:05 自動更新（週K策略）。也可手動立即更新。</p>
-        {analysisMeta?.job_status === "running" && (
-          <p className="subText">雲端分析進行中，完成後清單會自動更新…</p>
+
+        {isAnalyzing && (
+          <div className="analysisProgressBox">
+            <div className="analysisProgressTop">
+              <span>{analysisMeta?.job_message || "雲端分析進行中…"}</span>
+              <strong>{progress}%</strong>
+            </div>
+            <div className="analysisProgressTrack">
+              <div className="analysisProgressBar" style={{ width: `${Math.max(progress, 5)}%` }} />
+            </div>
+            <p className="subText">
+              已耗時 {formatElapsed(elapsed)}（完整分析約 5～10 分鐘，請勿關閉頁面）
+            </p>
+            {stuck && (
+              <p className="message">分析似乎卡住了，請按下方「強制重新啟動」。</p>
+            )}
+          </div>
         )}
-        <button onClick={onRunAnalysis} disabled={analysisRunning || analysisMeta?.job_status === "running"}>
-          {analysisRunning || analysisMeta?.job_status === "running"
-            ? "分析中（約 1～3 分鐘）..."
-            : "立即更新分析"}
-        </button>
+
+        {analysisMeta?.job_status === "failed" && (
+          <p className="message">{analysisMeta.job_error || analysisMeta.job_message || "上次分析失敗，請重新啟動"}</p>
+        )}
+
+        {stuck ? (
+          <button onClick={() => onRunAnalysis(true)}>強制重新啟動</button>
+        ) : (
+          <button onClick={() => onRunAnalysis(false)} disabled={isAnalyzing}>
+            {isAnalyzing ? "分析進行中…" : "立即更新分析"}
+          </button>
+        )}
       </section>
 
       <section className="card-grid">

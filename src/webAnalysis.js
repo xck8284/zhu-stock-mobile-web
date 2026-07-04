@@ -372,9 +372,10 @@ export async function fetchWebWarrants(apiBase, headersFn) {
   return { items: [], source: "none" };
 }
 
-export async function runWebAnalysisRequest(apiBase, headersFn) {
+export async function runWebAnalysisRequest(apiBase, headersFn, options = {}) {
+  const force = options.force ? "?force=true" : "";
   try {
-    const response = await fetch(`${apiBase}/web/run-analysis`, {
+    const response = await fetch(`${apiBase}/web/run-analysis${force}`, {
       method: "POST",
       headers: headersFn(false),
     });
@@ -433,4 +434,47 @@ export async function fetchWebAnalysisStatus(apiBase, headersFn) {
   }
 
   return null;
+}
+
+export function formatElapsed(seconds) {
+  const total = Math.max(0, Number(seconds) || 0);
+  const minutes = Math.floor(total / 60);
+  const remain = total % 60;
+  if (minutes > 0) return `${minutes} 分 ${remain} 秒`;
+  return `${remain} 秒`;
+}
+
+export async function waitForAnalysisComplete(apiBase, headersFn, onUpdate, options = {}) {
+  const pollMs = options.pollMs || 3000;
+  const timeoutMs = options.timeoutMs || 12 * 60 * 1000;
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const status = await fetchWebAnalysisStatus(apiBase, headersFn);
+    if (status) onUpdate(status);
+
+    const jobStatus = status?.job_status;
+    if (jobStatus === "idle") {
+      return { ok: true, data: status, reason: "done" };
+    }
+    if (jobStatus === "failed") {
+      return {
+        ok: false,
+        data: status,
+        reason: "failed",
+        message: status?.job_error || status?.job_message || "分析失敗，請稍後再試",
+      };
+    }
+    if (jobStatus !== "running") {
+      return { ok: false, data: status, reason: "unknown", message: "分析狀態異常，請重新啟動" };
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+
+  return {
+    ok: false,
+    reason: "timeout",
+    message: "分析時間較長，請稍後再查看；若超過 12 分鐘仍無結果可重新啟動",
+  };
 }

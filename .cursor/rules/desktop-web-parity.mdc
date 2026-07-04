@@ -40,11 +40,11 @@ alwaysApply: true
 
 ### 會員審查 / 管理（creator）
 - [x] 會員列表、啟用/停用
-- [x] 付款審核（核准/拒絕）
-- [x] 待審筆數（pending_review）
-- [ ] 手動開通方案 `/admin/set-plan`
-- [ ] 贈送天數 `/admin/grant-free`
-- [ ] 重綁裝置 `/admin/rebind-device`
+- [x] 付款審核（核准/拒絕、篩選、自訂拒絕原因）
+- [x] 待審筆數
+- [x] 手動開通方案 `/admin/set-plan`
+- [x] 贈送天數 `/admin/grant-free`
+- [x] 重綁裝置 `/admin/rebind-device`
 - [ ] 會員詳情、匯出
 
 ### 會員回饋
@@ -66,8 +66,9 @@ alwaysApply: true
 | 週量 | ≥10000 張 | ≥10000 張 |
 | 權證乖離 | 桌面 fastscan 有 bias<50 | 使用者要求看多無上限；權證依桌面 |
 
-## 完成修正後
+## 自主開發原則
 
-1. 執行 `scripts/auto-push-deploy.ps1` 推送前後端。
-2. 簡述已對齊項目與仍待補項。
-3. 若改動策略，提醒使用者重新跑分析。
+1. **不要只解釋不交付**：發現差距就立即改 code、push、部署，再回報結果。
+2. **不要等用戶逐步下指令**：依桌面版規格主動補齊下一項缺口。
+3. **每輪至少完成一個可驗收成果**（例如：後台可審核、看多可對照桌面）。
+4. **完成後自動執行** `scripts/auto-push-deploy.ps1`。

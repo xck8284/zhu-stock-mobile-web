@@ -303,3 +303,42 @@ button:disabled {
 .adminUserCard button {
   margin-top: 8px;
 }
+
+.adminUserCard.selected {
+  border: 1px solid #58a6ff;
+  background: #1c2333;
+}
+
+.adminForm {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.adminForm label {
+  font-size: 13px;
+  color: #8b949e;
+  margin-top: 4px;
+}
+
+.adminFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.adminFilters button {
+  width: auto;
+  flex: 1;
+  min-width: 70px;
+  background: #21262d;
+}
+
+.adminFilters button.active {
+  background: #238636;
+}

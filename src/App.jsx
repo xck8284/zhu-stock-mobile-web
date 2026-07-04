@@ -130,8 +130,30 @@ function App() {
   };
 
   const refreshMemberInfo = async (account) => {
+    const token = getToken();
+    if (token) {
+      try {
+        const meRes = await fetch(`${API_BASE}/auth/me`, { headers: authHeaders(false) });
+        const meData = await meRes.json();
+        if (meRes.ok) {
+          const merged = {
+            ...(meData.license || {}),
+            ...(meData.user || {}),
+            account: meData.user?.username,
+            email: meData.user?.email,
+            is_creator: meData.user?.is_creator,
+          };
+          setMemberInfo((prev) => ({ ...(prev || {}), ...merged }));
+          setIsCreator(Boolean(meData.user?.is_creator));
+          return merged;
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
     const savedAccount = account || localStorage.getItem("zhu_mobile_account");
-    if (!savedAccount && !getToken()) return null;
+    if (!savedAccount && !token) return null;
 
     try {
       const response = await fetch(
@@ -1033,6 +1055,13 @@ function AdminPage() {
   const [paymentReports, setPaymentReports] = useState([]);
   const [feedbackReports, setFeedbackReports] = useState([]);
   const [view, setView] = useState("menu");
+  const [paymentFilter, setPaymentFilter] = useState("pending");
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [grantDays, setGrantDays] = useState("30");
+  const [grantReason, setGrantReason] = useState("");
+  const [planType, setPlanType] = useState("monthly");
+  const [deviceId, setDeviceId] = useState("");
+  const [deviceName, setDeviceName] = useState("");
 
   const loadAdminUsers = async () => {
     try {
@@ -1091,35 +1120,89 @@ function AdminPage() {
     }
   };
 
+  const postAdmin = async (url, body) => {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(body),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(parseError(data) || "操作失敗");
+    }
+    return data;
+  };
+
   const toggleUserActive = async (user) => {
     try {
-      const response = await fetch(`${API_BASE}/admin/deactivate-user`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          account: user.username || user.email,
-          is_active: !user.is_active,
-        }),
+      const data = await postAdmin(`${API_BASE}/admin/deactivate-user`, {
+        account: user.username || user.email,
+        is_active: !user.is_active,
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert(data.message || "操作完成");
-        loadAdminUsers();
-      } else {
-        alert(parseError(data) || "操作失敗");
-      }
+      alert(data.message || "操作完成");
+      loadAdminUsers();
     } catch (err) {
-      alert("操作失敗");
+      alert(err.message || "操作失敗");
+    }
+  };
+
+  const grantFreeToUser = async () => {
+    if (!selectedUser) return;
+    try {
+      const data = await postAdmin(`${API_BASE}/admin/grant-free`, {
+        account: selectedUser.username || selectedUser.email,
+        free_days: Number(grantDays) || 30,
+        reason: grantReason,
+      });
+      alert(data.message || "已贈送");
+      loadAdminUsers();
+    } catch (err) {
+      alert(err.message || "贈送失敗");
+    }
+  };
+
+  const setPlanForUser = async () => {
+    if (!selectedUser) return;
+    try {
+      const data = await postAdmin(`${API_BASE}/admin/set-plan`, {
+        account: selectedUser.username || selectedUser.email,
+        plan_type: planType,
+      });
+      alert(data.message || "已開通方案");
+      loadAdminUsers();
+    } catch (err) {
+      alert(err.message || "開通失敗");
+    }
+  };
+
+  const rebindDeviceForUser = async () => {
+    if (!selectedUser || !deviceId.trim()) {
+      alert("請輸入 device_id");
+      return;
+    }
+    try {
+      const data = await postAdmin(`${API_BASE}/admin/rebind-device`, {
+        account: selectedUser.username || selectedUser.email,
+        device_id: deviceId.trim(),
+        device_name: deviceName.trim(),
+      });
+      alert(data.message || "已重綁裝置");
+      loadAdminUsers();
+    } catch (err) {
+      alert(err.message || "重綁失敗");
     }
   };
 
   const reviewPayment = async (reportId, action) => {
-    const endpoint =
+    let endpoint =
       action === "approve"
         ? `${API_BASE}/admin/approve-payment-report/${reportId}`
-        : `${API_BASE}/admin/reject-payment-report/${reportId}?note=網頁版拒絕`;
+        : `${API_BASE}/admin/reject-payment-report/${reportId}`;
+
+    if (action === "reject") {
+      const note = window.prompt("拒絕原因（選填）", "") || "管理員拒絕";
+      endpoint += `?note=${encodeURIComponent(note)}`;
+    }
 
     try {
       const response = await fetch(endpoint, {
@@ -1139,14 +1222,33 @@ function AdminPage() {
     }
   };
 
+  const filteredPayments = paymentReports.filter((r) => {
+    if (paymentFilter === "all") return true;
+    return r.status === paymentFilter;
+  });
+
+  const pendingCount = paymentReports.filter((r) => r.status === "pending").length;
+
+  useEffect(() => {
+    if (paymentReports.length === 0) {
+      fetch(`${API_BASE}/admin/payment-reports`, { headers: authHeaders(false) })
+        .then((r) => r.json())
+        .then((data) => {
+          if (Array.isArray(data.items)) setPaymentReports(data.items);
+        })
+        .catch(() => {});
+    }
+  }, []);
+
   return (
     <section className="panel pageWithNav">
       <h2>👑 創作者後台</h2>
+      <p className="subText">對齊桌面版：付款審核、會員管理、贈送天數、手動開通、重綁裝置、會員回饋。</p>
 
       {view === "menu" && (
         <>
           <div className="adminItem" onClick={loadPaymentReports}>
-            付款審核
+            付款審核 {pendingCount > 0 ? `（待審 ${pendingCount}）` : ""}
           </div>
           <div className="adminItem" onClick={loadAdminUsers}>
             會員管理
@@ -1154,53 +1256,92 @@ function AdminPage() {
           <div className="adminItem" onClick={loadFeedbackReports}>
             會員回饋
           </div>
-          <div className="adminItem" onClick={() => alert("推薦組織圖功能開發中")}>
-            推薦組織圖
-          </div>
         </>
       )}
 
       {view !== "menu" && (
-        <button className="backBtn" onClick={() => setView("menu")}>
+        <button className="backBtn" onClick={() => { setView("menu"); setSelectedUser(null); }}>
           返回後台選單
         </button>
       )}
 
-      {view === "users" && adminUsers.length > 0 && (
+      {view === "users" && (
         <div className="adminList">
           <h3>會員列表（{adminUsers.length}）</h3>
 
           {adminUsers.map((u) => (
-            <div className="adminUserCard" key={u.id}>
+            <div
+              className={`adminUserCard ${selectedUser?.id === u.id ? "selected" : ""}`}
+              key={u.id}
+              onClick={() => setSelectedUser(u)}
+            >
               <div>帳號：{u.username}</div>
               <div>Email：{u.email}</div>
-              <div>方案：{u.plan_type}</div>
-              <div>狀態：{u.subscription_status}</div>
-              <div>剩餘天數：{u.days_left}</div>
-              {u.pending_review > 0 && <div>待審付款：{u.pending_review} 筆</div>}
-              <button onClick={() => toggleUserActive(u)}>
+              <div>方案：{u.plan_type}｜{u.subscription_status}</div>
+              <div>剩餘：{u.days_left} 天</div>
+              {u.pending_review > 0 && <div className="alarm">待審付款：{u.pending_review} 筆</div>}
+              {u.device_id && <div>裝置：{u.device_id}</div>}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleUserActive(u);
+                }}
+              >
                 {u.is_active ? "停用會員" : "啟用會員"}
               </button>
             </div>
           ))}
+
+          {selectedUser && (
+            <div className="adminForm">
+              <h3>管理：{selectedUser.username}</h3>
+              <label>贈送免費天數</label>
+              <input value={grantDays} onChange={(e) => setGrantDays(e.target.value)} placeholder="天數" />
+              <input value={grantReason} onChange={(e) => setGrantReason(e.target.value)} placeholder="原因" />
+              <button onClick={grantFreeToUser}>贈送天數</button>
+
+              <label>手動開通方案</label>
+              <select value={planType} onChange={(e) => setPlanType(e.target.value)}>
+                <option value="monthly">月訂閱</option>
+                <option value="halfyear">半年</option>
+                <option value="yearly">年方案</option>
+                <option value="trial">試用</option>
+              </select>
+              <button onClick={setPlanForUser}>開通方案</button>
+
+              <label>重綁裝置</label>
+              <input value={deviceId} onChange={(e) => setDeviceId(e.target.value)} placeholder="device_id" />
+              <input value={deviceName} onChange={(e) => setDeviceName(e.target.value)} placeholder="裝置名稱" />
+              <button onClick={rebindDeviceForUser}>重綁裝置</button>
+            </div>
+          )}
         </div>
       )}
 
       {view === "payments" && (
         <div className="adminList">
-          <h3>付款審核（{paymentReports.length}）</h3>
+          <h3>付款審核（{filteredPayments.length}）</h3>
+          <div className="adminFilters">
+            <button className={paymentFilter === "pending" ? "active" : ""} onClick={() => setPaymentFilter("pending")}>待審</button>
+            <button className={paymentFilter === "approved" ? "active" : ""} onClick={() => setPaymentFilter("approved")}>已核准</button>
+            <button className={paymentFilter === "rejected" ? "active" : ""} onClick={() => setPaymentFilter("rejected")}>已拒絕</button>
+            <button className={paymentFilter === "all" ? "active" : ""} onClick={() => setPaymentFilter("all")}>全部</button>
+          </div>
 
-          {paymentReports.length === 0 && (
-            <div className="adminItem">目前沒有待審資料</div>
+          {filteredPayments.length === 0 && (
+            <div className="adminItem">此篩選下沒有資料</div>
           )}
 
-          {paymentReports.map((report) => (
+          {filteredPayments.map((report) => (
             <div className="adminUserCard" key={report.id}>
               <div>帳號：{report.username}</div>
+              <div>Email：{report.email}</div>
               <div>方案：{report.plan_type}</div>
               <div>金額：{report.amount}</div>
+              <div>匯款人：{report.payer_name || "—"}</div>
               <div>末五碼：{report.transfer_last5}</div>
               <div>狀態：{report.status}</div>
+              {report.review_note && <div>備註：{report.review_note}</div>}
               {report.status === "pending" && (
                 <div className="adminActions">
                   <button onClick={() => reviewPayment(report.id, "approve")}>核准</button>

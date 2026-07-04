@@ -604,7 +604,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
           </p>
         )}
         <p className="subText">
-          選股邏輯與電腦版相同：看多＝TRAINING_POOL（週量≥1萬、趨勢突破守穩、StrongScore≥55）＋上櫃補強；多方關鍵K＝本週正式突破。
+          看多＝TRAINING_POOL 再篩 StrongScore≥100；多方關鍵K＝本週正式突破；看空＝空方 TRAINING_POOL；權證另需 5 星、90～120 天。
         </p>
 
         {isAnalyzing && hasPartialData && serverProgress >= 85 && (
@@ -647,7 +647,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
       <section className="card-grid">
         <div className="card bullish" onClick={() => setPage("bullish")}>
           <h3>📈 看多清單</h3>
-          <p>TRAINING_POOL（同電腦版）</p>
+          <p>StrongScore≥100</p>
         </div>
 
         <div className="card bullish" onClick={() => setPage("bullish-keyk")}>
@@ -689,7 +689,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
 function StockListPage({ title, type, memberInfo, setPage }) {
   const strategyText =
     type === "bullish"
-      ? "同電腦版 CLIENT_BULLISH：週量≥1萬張、站上週20MA（或均線多頭）、下降趨勢線突破後守穩、StrongScore≥55，並混入上櫃週K補強（最多40檔）。"
+      ? "TRAINING_POOL（週量≥1萬、趨勢突破守穩）再篩選 StrongScore≥100；上櫃補強標的亦需≥100 才顯示。"
       : "同電腦版 CLIENT_BEARISH：週量≥1萬、收盤在週20MA下、上升趨勢線跌破後守穩、BearishScore≥55。";
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);

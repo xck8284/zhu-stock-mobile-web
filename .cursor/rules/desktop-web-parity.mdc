@@ -23,7 +23,7 @@ alwaysApply: true
 ## 功能對齊清單（未完成項須持續補齊）
 
 ### 選股策略
-- [x] 看多（CLIENT_BULLISH：training pool + 上櫃補強 + mix 排序）
+- [x] 看多（TRAINING_POOL + StrongScore≥100 + 上櫃補強 + mix 排序）
 - [x] 看空（CLIENT_BEARISH：空方 pool + 星等排序）
 - [x] 權證（StrongScore≥100、5星、90～120天；全市場資料只抓一次）
 - [ ] 多方關鍵K / 空方關鍵K
@@ -61,7 +61,7 @@ alwaysApply: true
 
 | 項目 | 桌面版 | 網頁版 |
 |------|--------|--------|
-| 看多清單 | training pool 全顯示 | 同左 |
+| 看多清單 | TRAINING_POOL + StrongScore≥100 | 同左 |
 | 權證 | score≥100、5星、90～120天 | 同左 |
 | 週量 | ≥10000 張 | ≥10000 張 |
 | 權證乖離 | 桌面 fastscan 有 bias<50 | 使用者要求看多無上限；權證依桌面 |

@@ -332,44 +332,86 @@ export function getLocalWebAnalysis() {
   }
 }
 
-export async function fetchWebStockList(type, apiBase, headersFn) {
-  const response = await fetch(`${apiBase}/web/${type}`, {
-    headers: headersFn(false),
-  });
-  const data = await response.json().catch(() => ({}));
-
-  if (response.ok) {
-    return {
-      items: Array.isArray(data.items) ? data.items : [],
-      source: "server",
-    };
+function networkErrorMessage(err) {
+  const raw = cleanText(err?.message);
+  if (!raw || raw === "Failed to fetch" || raw === "NetworkError when attempting to fetch resource.") {
+    return "無法連線後端（伺服器可能正在冷啟動或分析中），請稍後再按「重新載入」";
   }
+  return raw;
+}
 
-  const message =
-    typeof data?.detail === "string"
-      ? data.detail
-      : data?.message || "讀取失敗，請稍後再試";
-  throw new Error(message);
+function isNetworkFetchError(err) {
+  const raw = cleanText(err?.message);
+  return !raw || raw === "Failed to fetch" || raw.includes("NetworkError");
+}
+
+async function fetchWithRetry(url, options, retries = 3) {
+  let lastError = null;
+  for (let attempt = 0; attempt < retries; attempt += 1) {
+    try {
+      return await fetch(url, options);
+    } catch (err) {
+      lastError = err;
+      if (attempt < retries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1200 * (attempt + 1)));
+      }
+    }
+  }
+  throw lastError || new Error("讀取失敗，請稍後再試");
+}
+
+export async function fetchWebStockList(type, apiBase, headersFn) {
+  try {
+    const response = await fetchWithRetry(`${apiBase}/web/${type}`, {
+      headers: headersFn(false),
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (response.ok) {
+      return {
+        items: Array.isArray(data.items) ? data.items : [],
+        source: "server",
+      };
+    }
+
+    const message =
+      typeof data?.detail === "string"
+        ? data.detail
+        : data?.message || "讀取失敗，請稍後再試";
+    throw new Error(message);
+  } catch (err) {
+    if (!isNetworkFetchError(err)) {
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+    throw new Error(networkErrorMessage(err));
+  }
 }
 
 export async function fetchWebWarrants(apiBase, headersFn) {
-  const response = await fetch(`${apiBase}/web/warrants`, {
-    headers: headersFn(false),
-  });
-  const data = await response.json().catch(() => ({}));
+  try {
+    const response = await fetchWithRetry(`${apiBase}/web/warrants`, {
+      headers: headersFn(false),
+    });
+    const data = await response.json().catch(() => ({}));
 
-  if (response.ok) {
-    return {
-      items: Array.isArray(data.items) ? data.items : [],
-      source: "server",
-    };
+    if (response.ok) {
+      return {
+        items: Array.isArray(data.items) ? data.items : [],
+        source: "server",
+      };
+    }
+
+    const message =
+      typeof data?.detail === "string"
+        ? data.detail
+        : data?.message || "讀取失敗，請稍後再試";
+    throw new Error(message);
+  } catch (err) {
+    if (!isNetworkFetchError(err)) {
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+    throw new Error(networkErrorMessage(err));
   }
-
-  const message =
-    typeof data?.detail === "string"
-      ? data.detail
-      : data?.message || "讀取失敗，請稍後再試";
-  throw new Error(message);
 }
 
 export async function runWebAnalysisRequest(apiBase, headersFn, options = {}) {

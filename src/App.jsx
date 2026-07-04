@@ -694,6 +694,8 @@ function StockListPage({ title, type, memberInfo, setPage }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [statusHint, setStatusHint] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
   const licenseBlocked =
     memberInfo && memberInfo.allowed === false && !memberInfo.is_creator;
@@ -708,10 +710,21 @@ function StockListPage({ title, type, memberInfo, setPage }) {
     const loadStocks = async () => {
       setLoading(true);
       setError("");
+      setStatusHint("");
 
       try {
-        const { items } = await fetchWebStockList(type, API_BASE, authHeaders);
+        const [{ items }, status] = await Promise.all([
+          fetchWebStockList(type, API_BASE, authHeaders),
+          fetchWebAnalysisStatus(API_BASE, authHeaders),
+        ]);
         setItems(Array.isArray(items) ? items : []);
+        if (status?.job_status === "running") {
+          const pct = status.job_progress ?? 0;
+          const msg = status.job_message || "正在建立歷史快取";
+          setStatusHint(`後台分析進行中（${pct}%｜${msg}），目前顯示上次更新資料。`);
+        } else if (status?.updated_at) {
+          setStatusHint(`資料更新：${status.updated_at}`);
+        }
       } catch (err) {
         console.error(err);
         setError(err?.message || "讀取失敗，請稍後再試");
@@ -721,7 +734,7 @@ function StockListPage({ title, type, memberInfo, setPage }) {
     };
 
     loadStocks();
-  }, [type, licenseBlocked, memberInfo]);
+  }, [type, licenseBlocked, memberInfo, reloadKey]);
 
   const formatBias = (bias) => {
     if (bias === null || bias === undefined || bias === "") return "-";
@@ -733,6 +746,7 @@ function StockListPage({ title, type, memberInfo, setPage }) {
     <section className="panel pageWithNav">
       <h2>{title}</h2>
       <p className="subText">{strategyText}</p>
+      {statusHint && !error && <p className="subText">{statusHint}</p>}
       {!loading && !error && items.length > 0 && (
         <p className="subText">共 {items.length} 檔（對齊桌面版策略）</p>
       )}
@@ -741,6 +755,11 @@ function StockListPage({ title, type, memberInfo, setPage }) {
       {error && (
         <div className="message">
           {error}
+          {!licenseBlocked && (
+            <div className="adminItem" onClick={() => setReloadKey((k) => k + 1)}>
+              重新載入
+            </div>
+          )}
           {licenseBlocked && (
             <div className="adminItem" onClick={() => setPage("subscribe")}>
               前往訂閱方案
@@ -792,6 +811,7 @@ function KeyKListPage({ title, type, memberInfo, setPage }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   const strategyText =
     type === "bullish-keyk"
       ? "同電腦版 CLIENT_BULLISH_KEYK：本週正式突破下降趨勢線＋盤整區（STRICT_BREAKOUT）。"
@@ -822,7 +842,7 @@ function KeyKListPage({ title, type, memberInfo, setPage }) {
     };
 
     loadItems();
-  }, [type, licenseBlocked, memberInfo]);
+  }, [type, licenseBlocked, memberInfo, reloadKey]);
 
   return (
     <section className="panel pageWithNav">
@@ -835,6 +855,11 @@ function KeyKListPage({ title, type, memberInfo, setPage }) {
       {error && (
         <div className="message">
           {error}
+          {!licenseBlocked && (
+            <div className="adminItem" onClick={() => setReloadKey((k) => k + 1)}>
+              重新載入
+            </div>
+          )}
           {licenseBlocked && (
             <div className="adminItem" onClick={() => setPage("subscribe")}>
               前往訂閱方案

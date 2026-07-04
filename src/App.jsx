@@ -142,6 +142,9 @@ function App() {
 
       if (response.ok) {
         setMemberInfo((prev) => ({ ...(prev || {}), ...data }));
+        if (data.is_creator != null) {
+          setIsCreator(Boolean(data.is_creator));
+        }
         return data;
       }
     } catch (err) {
@@ -164,13 +167,17 @@ function App() {
         return;
       }
 
-      const savedUser = localStorage.getItem("zhu_mobile_user");
-      if (savedUser) {
-        try {
-          const parsed = JSON.parse(savedUser);
-          setIsCreator(Boolean(parsed.user?.is_creator || parsed.is_creator));
-        } catch {
-          setIsCreator(false);
+      if (data.is_creator != null) {
+        setIsCreator(Boolean(data.is_creator));
+      } else {
+        const savedUser = localStorage.getItem("zhu_mobile_user");
+        if (savedUser) {
+          try {
+            const parsed = JSON.parse(savedUser);
+            setIsCreator(Boolean(parsed.user?.is_creator || parsed.is_creator));
+          } catch {
+            setIsCreator(false);
+          }
         }
       }
 
@@ -207,7 +214,7 @@ function App() {
     return () => clearInterval(timer);
   }, [analysisMeta?.job_status]);
 
-  const login = async (creator = false) => {
+  const login = async () => {
     if (!email || !password) {
       alert("請輸入 Email / 帳號與密碼");
       return;
@@ -231,7 +238,7 @@ function App() {
         localStorage.setItem("zhu_mobile_token", data.access_token);
 
         setMemberInfo(data);
-        setIsCreator(Boolean(data.user?.is_creator) || creator);
+        setIsCreator(Boolean(data.user?.is_creator));
         await refreshMemberInfo(email);
         await loadAnalysisStatus();
         setPage("home");
@@ -380,11 +387,9 @@ function App() {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <button onClick={() => login(false)}>一般會員登入</button>
+          <button onClick={() => login()}>登入</button>
 
-          <button className="creatorBtn" onClick={() => login(true)}>
-            創作者最高權限登入
-          </button>
+          <p className="subText">創作者帳號登入後，底部導覽會出現「後台」。</p>
 
           <p className="link" onClick={() => setPage("register")}>
             還沒有帳號？前往註冊

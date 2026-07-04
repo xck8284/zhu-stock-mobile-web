@@ -20,55 +20,31 @@ alwaysApply: true
 | 前端 UI | — | `zhu-stock-mobile-web/src/App.jsx` |
 | 自動部署 | — | `scripts/auto-push-deploy.ps1` |
 
-## 功能對齊清單（未完成項須持續補齊）
+## 桌面版摘要列對齊目標
 
-### 選股策略
-- [x] 看多（TRAINING_POOL + StrongScore≥100 + 上櫃補強 + mix 排序）
-- [x] 看空（CLIENT_BEARISH：空方 pool + 星等排序）
-- [x] 權證（StrongScore≥100、5星、90～120天；全市場資料只抓一次）
-- [ ] 多方關鍵K / 空方關鍵K
-- [ ] 上櫃看多補充池（OTC supplement）
-- [ ] 個股詳情（星等、乖離率、趨勢記憶、意見）
-- [ ] 我的持股
+首頁摘要須對齊桌面版 `len(CLIENT_*)`：
 
-### 會員資格
-- [x] 註冊（email 驗證碼）、登入、試用 30 天
-- [x] 過期時鎖住分析與清單（`allowed === false`）
-- [x] 方案對齊：`halfyear`（180天）與桌面版一致
-- [ ] 忘記/重設密碼 UI
-- [ ] device_id 綁定（單裝置）
-
-### 會員審查 / 管理（creator）
-- [x] 會員列表、啟用/停用
-- [x] 付款審核（核准/拒絕、篩選、自訂拒絕原因）
-- [x] 待審筆數
-- [x] 手動開通方案 `/admin/set-plan`
-- [x] 贈送天數 `/admin/grant-free`
-- [x] 重綁裝置 `/admin/rebind-device`
-- [ ] 會員詳情、匯出
-
-### 會員回饋
-- [x] `POST /feedback/submit` 後端 + DB
-- [x] 前端回饋表單
-- [x] 管理端回饋列表
-
-### 付款審核
-- [x] 會員回報匯款、管理員核准/拒絕
-- [ ] 銀行欄位、自訂拒絕原因
-- [ ] 核准後 email 通知
+| 項目 | 桌面版來源 | 門檻 |
+|------|-----------|------|
+| 看多 | `CLIENT_BULLISH` ← `TRAINING_POOL` + OTC 補強 | StrongScore≥**55**（**不是**≥100） |
+| 多方關鍵K | `CLIENT_BULLISH_KEYK` ← `STRICT_BREAKOUT` | 本週正式突破 |
+| 看空 | `CLIENT_BEARISH` ← `BEARISH_TRAINING_POOL` | BearishScore≥55 |
+| 空方關鍵K | `CLIENT_BEARISH_KEYK` ← `BEARISH_KEY_BREAKDOWN` | 本週正式跌破 |
+| 權證 | fastscan 候選 | StrongScore≥100、5星、90～120天 |
 
 ## 策略常數（桌面版 ↔ 網頁版須一致）
 
 | 項目 | 桌面版 | 網頁版 |
 |------|--------|--------|
-| 看多清單 | TRAINING_POOL + StrongScore≥100 | 同左 |
+| 看多清單 | TRAINING_POOL（≥55）+ OTC 補強 | 同左 |
 | 權證 | score≥100、5星、90～120天 | 同左 |
+| 歷史天數 | end - **460** 天 | 同左 |
+| 結算日 | 14:10 前用昨日 | 同左 |
 | 週量 | ≥10000 張 | ≥10000 張 |
-| 權證乖離 | 桌面 fastscan 有 bias<50 | 使用者要求看多無上限；權證依桌面 |
 
 ## 自主開發原則
 
 1. **不要只解釋不交付**：發現差距就立即改 code、push、部署，再回報結果。
 2. **不要等用戶逐步下指令**：依桌面版規格主動補齊下一項缺口。
-3. **每輪至少完成一個可驗收成果**（例如：後台可審核、看多可對照桌面）。
+3. **每輪至少完成一個可驗收成果**。
 4. **完成後自動執行** `scripts/auto-push-deploy.ps1`。

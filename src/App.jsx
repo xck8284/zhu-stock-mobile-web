@@ -604,7 +604,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
           </p>
         )}
         <p className="subText">
-          看多＝TRAINING_POOL 再篩 StrongScore≥100；多方關鍵K＝本週正式突破；看空＝空方 TRAINING_POOL；權證另需 5 星、90～120 天。
+          看多＝TRAINING_POOL（≥55）；多方關鍵K＝本週正式突破；看空＝空方 TRAINING_POOL；權證另需 StrongScore≥100、5 星、90～120 天。
         </p>
 
         {isAnalyzing && hasPartialData && serverProgress >= 85 && (
@@ -621,7 +621,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
               <div className="analysisProgressBar" style={{ width: `${Math.max(progress, 5)}%` }} />
             </div>
             <p className="subText">
-              已耗時 {formatElapsed(elapsed)}（快取建立後約 1～2 分鐘；首次補齊 480 天歷史約 8～12 分鐘）
+              已耗時 {formatElapsed(elapsed)}（快取建立後約 1～2 分鐘；首次補齊 460 天歷史約 10～15 分鐘）
             </p>
             {stuck && (
               <p className="message">
@@ -689,7 +689,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
 function StockListPage({ title, type, memberInfo, setPage }) {
   const strategyText =
     type === "bullish"
-      ? "TRAINING_POOL（週量≥1萬、趨勢突破守穩）再篩選 StrongScore≥100；上櫃補強標的亦需≥100 才顯示。"
+      ? "同電腦版 CLIENT_BULLISH：TRAINING_POOL（週量≥1萬、趨勢突破守穩、StrongScore≥55）＋上櫃補強。"
       : "同電腦版 CLIENT_BEARISH：週量≥1萬、收盤在週20MA下、上升趨勢線跌破後守穩、BearishScore≥55。";
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -930,7 +930,7 @@ function WarrantPage({ memberInfo, setPage }) {
   return (
     <section className="panel pageWithNav">
       <h2>🎯 權證專區</h2>
-      <p className="subText">看多：週20MA＋趨勢突破守穩（同桌面版）。權證另篩 StrongScore≥100、5 星、剩餘 90～120 天。</p>
+      <p className="subText">看多：週20MA＋趨勢突破守穩（同桌面版 CLIENT_BULLISH）。權證另篩 StrongScore≥100、5 星、剩餘 90～120 天。</p>
 
       {loading && <div className="adminItem">載入中...</div>}
       {error && (

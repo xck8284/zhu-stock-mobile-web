@@ -515,10 +515,24 @@ function App() {
         />
       )}
       {page === "bullish" && (
-        <StockListPage title="📈 看多清單" type="bullish" memberInfo={memberInfo} setPage={setPage} />
+        <StockListPage
+          title="📈 看多清單"
+          type="bullish"
+          memberInfo={memberInfo}
+          setPage={setPage}
+          analysisMeta={analysisMeta}
+          onRunAnalysis={runWebAnalysis}
+        />
       )}
       {page === "bearish" && (
-        <StockListPage title="📉 看空清單" type="bearish" memberInfo={memberInfo} setPage={setPage} />
+        <StockListPage
+          title="📉 看空清單"
+          type="bearish"
+          memberInfo={memberInfo}
+          setPage={setPage}
+          analysisMeta={analysisMeta}
+          onRunAnalysis={runWebAnalysis}
+        />
       )}
       {page === "bullish-keyk" && (
         <KeyKListPage title="🔑 多方關鍵K" type="bullish-keyk" memberInfo={memberInfo} setPage={setPage} />
@@ -715,7 +729,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
   );
 }
 
-function StockListPage({ title, type, memberInfo, setPage }) {
+function StockListPage({ title, type, memberInfo, setPage, analysisMeta, onRunAnalysis }) {
   const strategyText =
     type === "bullish"
       ? "站上週20MA → 兩高點畫下降趨勢線（中間不穿K）→ 週量≥1萬 → 突破後守穩。"
@@ -728,6 +742,8 @@ function StockListPage({ title, type, memberInfo, setPage }) {
 
   const licenseBlocked =
     memberInfo && memberInfo.allowed === false && !memberInfo.is_creator;
+  const isAnalyzing = analysisMeta?.job_status === "running";
+  const isStaleList = isAnalyzing && !analysisMeta?.analysis_data_ready;
 
   useEffect(() => {
     if (licenseBlocked) {
@@ -775,7 +791,25 @@ function StockListPage({ title, type, memberInfo, setPage }) {
     <section className="panel pageWithNav">
       <h2>{title}</h2>
       <p className="subText">{strategyText}</p>
-      {statusHint && !error && <p className="subText">{statusHint}</p>}
+      {isStaleList && (
+        <div className="listAnalysisBox">
+          <p className="message">
+            分析進行中（{analysisMeta?.job_message || "載入中…"}）— 下面 {items.length}{" "}
+            檔是舊資料，完成後才會變多。
+          </p>
+          <div className="heroActions">
+            <button className="secondaryBtn" onClick={() => setPage("home")}>
+              回首頁看進度
+            </button>
+            {onRunAnalysis && (
+              <button className="forceRestartBtn" onClick={() => onRunAnalysis(true)}>
+                強制重新啟動分析
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {statusHint && !error && !isStaleList && <p className="subText">{statusHint}</p>}
       {!loading && !error && items.length > 0 && (
         <p className="subText">共 {items.length} 檔（對齊桌面版策略）</p>
       )}

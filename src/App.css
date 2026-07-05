@@ -62,6 +62,17 @@ body {
   opacity: 0.75;
 }
 
+.listAnalysisBox {
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.listAnalysisBox .heroActions {
+  margin-top: 10px;
+}
+
 .heroActions .forceRestartBtn {
   background: #c0392b;
   color: #fff;

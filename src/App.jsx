@@ -621,7 +621,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
               <div className="analysisProgressBar" style={{ width: `${Math.max(progress, 5)}%` }} />
             </div>
             <p className="subText">
-              已耗時 {formatElapsed(elapsed)}（快取建立後約 1～2 分鐘；首次補齊 460 天歷史約 10～15 分鐘）
+              已耗時 {formatElapsed(elapsed)}（635/660 以上會直接開始選股；日常更新約 1～2 分鐘）
             </p>
             {stuck && (
               <p className="message">

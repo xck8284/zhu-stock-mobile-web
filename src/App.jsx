@@ -601,10 +601,16 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
     isAnalyzing ? Math.min(95, Math.max(5, Math.round((elapsed / 90) * 100))) : 0
   );
   const orphanRunning = analysisMeta?.job_status === "running" && !analysisMeta?.job_started_at;
-  const stuckAtStart = isAnalyzing && (orphanRunning || (elapsed >= 90 && serverProgress <= 10));
-  const stuckAtHistory = isAnalyzing && historyProgress && historyProgress.ratio >= 0.92 && elapsed >= 300;
-  const stuckSlow = isAnalyzing && elapsed >= 180;
-  const stuck = stuckAtStart || stuckAtHistory || stuckSlow || isFailed;
+  const isParsingCache = String(analysisMeta?.job_message || "").includes("解析歷史快取");
+  const stuckAtStart = isAnalyzing && (orphanRunning || (elapsed >= 120 && serverProgress <= 10));
+  const stuckAtHistory =
+    isAnalyzing &&
+    !isParsingCache &&
+    historyProgress &&
+    historyProgress.ratio >= 0.92 &&
+    elapsed >= 1200;
+  const stuckParsing = isAnalyzing && isParsingCache && elapsed >= 1500;
+  const stuck = stuckAtStart || stuckAtHistory || stuckParsing || isFailed;
   const hasPartialData =
     analysisMeta?.has_data ||
     (analysisMeta?.bullish_count ?? 0) > 0 ||
@@ -633,7 +639,8 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
         )}
         {isAnalyzing && (
           <p className="message">
-            清單目前顯示的是舊資料（7/4），分析完成後才會變成跟電腦版接近的數量。
+            清單目前顯示的是舊資料（7/4 的 {analysisMeta?.bullish_count ?? 10} 檔），分析完成後才會變成跟電腦版接近的數量。
+            {isParsingCache ? " 現在在解析歷史快取，請勿重複按「強制重新啟動」。" : ""}
           </p>
         )}
         <p className="subText">
@@ -654,11 +661,14 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
               <div className="analysisProgressBar" style={{ width: `${Math.max(progress, 5)}%` }} />
             </div>
             <p className="subText">
-              已耗時 {formatElapsed(elapsed)}（635/660 以上會直接開始選股；日常更新約 1～2 分鐘）
+              已耗時 {formatElapsed(elapsed)}
+              {isParsingCache
+                ? "（正在解析歷史快取，這段可能 10～20 分鐘，請耐心等候、勿重按）"
+                : "（解析完成後會開始選股，日常更新約 1～2 分鐘）"}
             </p>
             {stuck && (
               <p className="message">
-                分析似乎卡住了（已 {formatElapsed(elapsed)}），請按下方「強制重新啟動」。
+                分析已超過 {formatElapsed(elapsed)} 仍無進展，才需要按「強制重新啟動」。
               </p>
             )}
           </div>
@@ -676,12 +686,14 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
             <>
               {isAnalyzing && (
                 <button disabled className="secondaryBtn">
-                  分析進行中…
+                  分析進行中…（勿重按）
                 </button>
               )}
-              <button className="forceRestartBtn" onClick={() => onRunAnalysis(true)}>
-                強制重新啟動分析
-              </button>
+              {(stuck || isFailed) && (
+                <button className="forceRestartBtn" onClick={() => onRunAnalysis(true)}>
+                  強制重新啟動分析
+                </button>
+              )}
             </>
           )}
         </div>
@@ -795,17 +807,12 @@ function StockListPage({ title, type, memberInfo, setPage, analysisMeta, onRunAn
         <div className="listAnalysisBox">
           <p className="message">
             分析進行中（{analysisMeta?.job_message || "載入中…"}）— 下面 {items.length}{" "}
-            檔是舊資料，完成後才會變多。
+            檔是 7/4 舊資料，完成後才會變多。請回首頁看進度，勿在此頁重複按重啟。
           </p>
           <div className="heroActions">
             <button className="secondaryBtn" onClick={() => setPage("home")}>
               回首頁看進度
             </button>
-            {onRunAnalysis && (
-              <button className="forceRestartBtn" onClick={() => onRunAnalysis(true)}>
-                強制重新啟動分析
-              </button>
-            )}
           </div>
         </div>
       )}

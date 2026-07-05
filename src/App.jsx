@@ -101,6 +101,7 @@ function App() {
 
       if (!result.ok) {
         alert(result.message || "分析失敗，無法取得台股資料");
+        await loadAnalysisStatus();
         return;
       }
 
@@ -564,19 +565,32 @@ function App() {
   );
 }
 
+function parseHistoryProgress(message) {
+  const match = String(message || "").match(/(\d+)\s*\/\s*(\d+)/);
+  if (!match) return null;
+  const done = Number(match[1]);
+  const total = Number(match[2]);
+  if (!Number.isFinite(done) || !Number.isFinite(total) || total <= 0) return null;
+  return { done, total, ratio: done / total };
+}
+
 function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis, analysisRunning, localElapsed }) {
   const isAnalyzing = analysisRunning || analysisMeta?.job_status === "running";
+  const isFailed = analysisMeta?.job_status === "failed";
   const serverProgress = Number(analysisMeta?.job_progress) || 0;
   const serverElapsed = Number(analysisMeta?.job_elapsed_sec) || 0;
   const elapsed = Math.max(localElapsed, serverElapsed);
+  const historyProgress = parseHistoryProgress(analysisMeta?.job_message);
   const progress = Math.max(
     serverProgress,
+    historyProgress ? Math.min(95, Math.round(historyProgress.ratio * 100)) : 0,
     isAnalyzing ? Math.min(95, Math.max(5, Math.round((elapsed / 90) * 100))) : 0
   );
   const orphanRunning = analysisMeta?.job_status === "running" && !analysisMeta?.job_started_at;
   const stuckAtStart = isAnalyzing && (orphanRunning || (elapsed >= 90 && serverProgress <= 10));
-  const stuckAtEnd = isAnalyzing && elapsed >= 120 && serverProgress >= 85;
-  const stuck = stuckAtStart || stuckAtEnd;
+  const stuckAtHistory = isAnalyzing && historyProgress && historyProgress.ratio >= 0.92 && elapsed >= 300;
+  const stuckSlow = isAnalyzing && elapsed >= 180;
+  const stuck = stuckAtStart || stuckAtHistory || stuckSlow || isFailed;
   const hasPartialData =
     analysisMeta?.has_data ||
     (analysisMeta?.bullish_count ?? 0) > 0 ||
@@ -631,23 +645,33 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
           </div>
         )}
 
-        {analysisMeta?.job_status === "failed" && !analysisMeta?.has_data && (
+        {analysisMeta?.job_status === "failed" && (
           <p className="message">{analysisMeta.job_error || analysisMeta.job_message || "上次分析失敗，請重新啟動"}</p>
         )}
 
-        {stuck ? (
-          <button onClick={() => onRunAnalysis(true)}>強制重新啟動</button>
-        ) : (
-          <button onClick={() => onRunAnalysis(false)} disabled={isAnalyzing}>
-            {isAnalyzing ? "分析進行中…" : "立即更新分析"}
-          </button>
-        )}
+        <div className="heroActions">
+          {!isAnalyzing && !isFailed && (
+            <button onClick={() => onRunAnalysis(false)}>立即更新分析</button>
+          )}
+          {(isAnalyzing || isFailed) && (
+            <>
+              {isAnalyzing && (
+                <button disabled className="secondaryBtn">
+                  分析進行中…
+                </button>
+              )}
+              <button className="forceRestartBtn" onClick={() => onRunAnalysis(true)}>
+                強制重新啟動分析
+              </button>
+            </>
+          )}
+        </div>
       </section>
 
       <section className="card-grid">
         <div className="card bullish" onClick={() => setPage("bullish")}>
           <h3>📈 看多清單</h3>
-          <p>StrongScore≥100</p>
+          <p>週20MA＋趨勢突破守穩</p>
         </div>
 
         <div className="card bullish" onClick={() => setPage("bullish-keyk")}>

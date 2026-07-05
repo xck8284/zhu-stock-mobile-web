@@ -46,6 +46,28 @@ body {
   margin-top: 14px;
 }
 
+.heroActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.heroActions button {
+  margin-top: 0;
+  width: 100%;
+}
+
+.heroActions .secondaryBtn {
+  opacity: 0.75;
+}
+
+.heroActions .forceRestartBtn {
+  background: #c0392b;
+  color: #fff;
+  font-weight: 700;
+}
+
 .hero h2 {
   margin: 0 0 10px;
   font-size: 26px;

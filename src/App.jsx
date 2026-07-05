@@ -610,11 +610,16 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
             {analysisMeta.settle_date ? `｜結算日 ${analysisMeta.settle_date}` : ""}
           </p>
         )}
-        {analysisMeta?.updated_at && (
+        {analysisMeta?.updated_at && !isAnalyzing && (
           <p className="subText">
             看多：{analysisMeta.bullish_count ?? 0} 檔｜多方關鍵K：{analysisMeta.bullish_keyk_count ?? 0} 檔｜看空：
             {analysisMeta.bearish_count ?? 0} 檔｜空方關鍵K：{analysisMeta.bearish_keyk_count ?? 0} 檔｜權證：
             {analysisMeta.warrant_count ?? 0} 筆
+          </p>
+        )}
+        {isAnalyzing && (
+          <p className="message">
+            清單目前顯示的是舊資料（7/4），分析完成後才會變成跟電腦版接近的數量。
           </p>
         )}
         <p className="subText">

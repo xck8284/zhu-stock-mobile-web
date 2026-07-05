@@ -604,7 +604,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
           </p>
         )}
         <p className="subText">
-          看多＝TRAINING_POOL（≥55）；多方關鍵K＝本週正式突破；看空＝空方 TRAINING_POOL；權證另需 StrongScore≥100、5 星、90～120 天。
+          看多＝週20MA上＋下降趨勢線守穩；多方關鍵K＝突破盤整爆量；看空＝週20MA下＋上升趨勢線守弱；權證另需≥100分、5星。
         </p>
 
         {isAnalyzing && hasPartialData && serverProgress >= 85 && (
@@ -689,8 +689,8 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
 function StockListPage({ title, type, memberInfo, setPage }) {
   const strategyText =
     type === "bullish"
-      ? "同電腦版 CLIENT_BULLISH：TRAINING_POOL（週量≥1萬、趨勢突破守穩、StrongScore≥55）＋上櫃補強。"
-      : "同電腦版 CLIENT_BEARISH：週量≥1萬、收盤在週20MA下、上升趨勢線跌破後守穩、BearishScore≥55。";
+      ? "站上週20MA → 兩高點畫下降趨勢線（中間不穿K）→ 週量≥1萬 → 突破後守穩。"
+      : "跌破週20MA → 兩低點畫上升趨勢線（中間不穿K）→ 週量≥1萬 → 跌破後守穩。";
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -814,8 +814,8 @@ function KeyKListPage({ title, type, memberInfo, setPage }) {
   const [reloadKey, setReloadKey] = useState(0);
   const strategyText =
     type === "bullish-keyk"
-      ? "同電腦版 CLIENT_BULLISH_KEYK：本週正式突破下降趨勢線＋盤整區（STRICT_BREAKOUT）。"
-      : "同電腦版 CLIENT_BEARISH_KEYK：本週正式跌破上升趨勢線（BEARISH_KEY_BREAKDOWN）。";
+      ? "多方關鍵K：本週突破下降趨勢線＋突破盤整區，且週量≥1萬（爆大量/天量）。"
+      : "空方關鍵K：本週正式跌破上升趨勢線。";;
 
   const licenseBlocked =
     memberInfo && memberInfo.allowed === false && !memberInfo.is_creator;

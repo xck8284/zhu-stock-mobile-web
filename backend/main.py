@@ -83,7 +83,7 @@ async def mobile_gateway(path: str, request: Request):
         key: value
         for key, value in request.headers.items()
         if key.lower() not in HOP_BY_HOP_HEADERS
-        and key.lower() not in {"host", "origin", "referer"}
+        and key.lower() not in {"host", "origin", "referer", "accept-encoding"}
     }
 
     try:

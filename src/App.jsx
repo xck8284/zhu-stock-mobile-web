@@ -9,7 +9,8 @@ import {
   waitForAnalysisComplete,
 } from "./webAnalysis";
 
-const API_BASE = "https://zhu-stock-app.onrender.com";
+const API_BASE =
+  import.meta.env.VITE_API_BASE || "https://zhu-stock-mobile-api.onrender.com";
 
 function getToken() {
   return localStorage.getItem("zhu_mobile_token");

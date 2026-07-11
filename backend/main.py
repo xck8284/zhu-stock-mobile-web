@@ -4,7 +4,8 @@ import asyncio
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
+from starlette.background import BackgroundTask
 
 
 app = FastAPI(title="ZHU STOCK Mobile API", version="2.0.0")
@@ -112,24 +113,27 @@ async def mobile_gateway(path: str, request: Request):
         client = httpx.AsyncClient(timeout=httpx.Timeout(30.0, read=1800.0))
 
     try:
-        upstream = await client.request(
-            method=request.method,
-            url=target_url,
+        upstream_request = client.build_request(
+            request.method,
+            target_url,
             params=request.query_params,
             headers=headers,
             content=body,
         )
+        upstream = await client.send(upstream_request, stream=True)
         # Render can briefly throttle bursts while a free instance is waking.
         # Retrying safe reads prevents the mobile UI from failing on that transient.
         if upstream.status_code == 429 and request.method in {"GET", "HEAD"}:
+            await upstream.aclose()
             await asyncio.sleep(1.0)
-            upstream = await client.request(
-                method=request.method,
-                url=target_url,
+            retry_request = client.build_request(
+                request.method,
+                target_url,
                 params=request.query_params,
                 headers=headers,
                 content=body,
             )
+            upstream = await client.send(retry_request, stream=True)
     except httpx.TimeoutException:
         return Response(
             content='{"detail":"雲端服務回應逾時，請稍後再試"}',
@@ -144,6 +148,7 @@ async def mobile_gateway(path: str, request: Request):
         )
 
     if upstream.status_code == 429 and "json" not in upstream.headers.get("content-type", ""):
+        await upstream.aclose()
         return Response(
             content='{"detail":"請求過於頻繁，請稍候再試"}',
             status_code=429,
@@ -155,8 +160,9 @@ async def mobile_gateway(path: str, request: Request):
         for key, value in upstream.headers.items()
         if key.lower() not in HOP_BY_HOP_HEADERS
     }
-    return Response(
-        content=upstream.content,
+    return StreamingResponse(
+        upstream.aiter_raw(),
         status_code=upstream.status_code,
         headers=response_headers,
+        background=BackgroundTask(upstream.aclose),
     )

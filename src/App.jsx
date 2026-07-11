@@ -1496,7 +1496,14 @@ function AdminPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setAdminUsers(data.items || []);
+        const users = data.items || [];
+        setAdminUsers(users);
+        setSelectedUser((current) => {
+          if (current) {
+            return users.find((user) => user.id === current.id) || users[0] || null;
+          }
+          return users[0] || null;
+        });
         setView("users");
       } else {
         alert(parseError(data) || "讀取會員失敗");

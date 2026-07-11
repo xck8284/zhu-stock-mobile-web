@@ -1599,29 +1599,7 @@ function AdminPage() {
       {view === "users" && (
         <div className="adminList">
           <h3>會員列表（{adminUsers.length}）</h3>
-
-          {adminUsers.map((u) => (
-            <div
-              className={`adminUserCard ${selectedUser?.id === u.id ? "selected" : ""}`}
-              key={u.id}
-              onClick={() => setSelectedUser(u)}
-            >
-              <div>帳號：{u.username}</div>
-              <div>Email：{u.email}</div>
-              <div>方案：{u.plan_type}｜{u.subscription_status}</div>
-              <div>剩餘：{u.days_left} 天</div>
-              {u.pending_review > 0 && <div className="alarm">待審付款：{u.pending_review} 筆</div>}
-              {u.device_id && <div>裝置：{u.device_id}</div>}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleUserActive(u);
-                }}
-              >
-                {u.is_active ? "停用會員" : "啟用會員"}
-              </button>
-            </div>
-          ))}
+          {!selectedUser && <p className="subText">點選會員後，管理工具會顯示在這裡。</p>}
 
           {selectedUser && (
             <div className="adminForm">
@@ -1669,6 +1647,33 @@ function AdminPage() {
               <button onClick={rebindDeviceForUser}>重綁裝置</button>
             </div>
           )}
+
+          <h3>選擇會員</h3>
+          {adminUsers.map((u) => (
+            <div
+              className={`adminUserCard ${selectedUser?.id === u.id ? "selected" : ""}`}
+              key={u.id}
+              onClick={() => {
+                setSelectedUser(u);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            >
+              <div>帳號：{u.username}</div>
+              <div>Email：{u.email}</div>
+              <div>方案：{u.plan_type}｜{u.subscription_status}</div>
+              <div>剩餘：{u.days_left} 天</div>
+              {u.pending_review > 0 && <div className="alarm">待審付款：{u.pending_review} 筆</div>}
+              {u.device_id && <div>裝置：{u.device_id}</div>}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleUserActive(u);
+                }}
+              >
+                {u.is_active ? "停用會員" : "啟用會員"}
+              </button>
+            </div>
+          ))}
         </div>
       )}
 

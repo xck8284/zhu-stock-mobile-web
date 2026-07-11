@@ -662,7 +662,7 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
               已耗時 {formatElapsed(elapsed)}
               {isParsingCache
                 ? "（正在解析歷史快取，這段可能 10～20 分鐘，請耐心等候、勿重按）"
-                : "（解析完成後會開始選股，日常更新約 1～2 分鐘）"}
+                : "（解析完成後會依序計算看多、看空、關鍵K並整理結果）"}
             </p>
             {stuck && (
               <p className="message">

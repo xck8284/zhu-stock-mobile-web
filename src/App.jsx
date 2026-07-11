@@ -1351,6 +1351,8 @@ function AdminPage() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [grantDays, setGrantDays] = useState("30");
   const [grantReason, setGrantReason] = useState("");
+  const [adjustDays, setAdjustDays] = useState("30");
+  const [accessReason, setAccessReason] = useState("");
   const [planType, setPlanType] = useState("monthly");
   const [deviceId, setDeviceId] = useState("");
   const [deviceName, setDeviceName] = useState("");
@@ -1464,6 +1466,43 @@ function AdminPage() {
       loadAdminUsers();
     } catch (err) {
       alert(err.message || "開通失敗");
+    }
+  };
+
+  const adjustUserDays = async (days) => {
+    if (!selectedUser) return;
+    const value = Number(days);
+    if (!Number.isInteger(value) || value === 0) {
+      alert("請輸入非 0 的整數天數");
+      return;
+    }
+    try {
+      const data = await postAdmin(`${API_BASE}/admin/adjust-days`, {
+        account: selectedUser.username || selectedUser.email,
+        days: value,
+        reason: accessReason,
+      });
+      alert(data.message || "天數已調整");
+      loadAdminUsers();
+    } catch (err) {
+      alert(err.message || "調整失敗");
+    }
+  };
+
+  const setUserAccess = async (enabled) => {
+    if (!selectedUser) return;
+    const action = enabled ? "開通" : "取消";
+    if (!window.confirm(`確定要${action} ${selectedUser.username || selectedUser.email} 的會員資格？`)) return;
+    try {
+      const data = await postAdmin(`${API_BASE}/admin/set-access`, {
+        account: selectedUser.username || selectedUser.email,
+        enabled,
+        reason: accessReason,
+      });
+      alert(data.message || `已${action}`);
+      loadAdminUsers();
+    } catch (err) {
+      alert(err.message || `${action}失敗`);
     }
   };
 
@@ -1591,6 +1630,29 @@ function AdminPage() {
               <input value={grantDays} onChange={(e) => setGrantDays(e.target.value)} placeholder="天數" />
               <input value={grantReason} onChange={(e) => setGrantReason(e.target.value)} placeholder="原因" />
               <button onClick={grantFreeToUser}>贈送天數</button>
+
+              <label>自由增減使用天數</label>
+              <input
+                type="number"
+                value={adjustDays}
+                onChange={(e) => setAdjustDays(e.target.value)}
+                placeholder="例如 30 或 -10"
+              />
+              <input
+                value={accessReason}
+                onChange={(e) => setAccessReason(e.target.value)}
+                placeholder="調整原因"
+              />
+              <div className="adminActions">
+                <button onClick={() => adjustUserDays(Math.abs(Number(adjustDays) || 0))}>增加天數</button>
+                <button className="dangerBtn" onClick={() => adjustUserDays(-Math.abs(Number(adjustDays) || 0))}>扣除天數</button>
+              </div>
+
+              <label>會員使用資格</label>
+              <div className="adminActions">
+                <button onClick={() => setUserAccess(true)}>開通資格</button>
+                <button className="dangerBtn" onClick={() => setUserAccess(false)}>取消資格</button>
+              </div>
 
               <label>手動開通方案</label>
               <select value={planType} onChange={(e) => setPlanType(e.target.value)}>

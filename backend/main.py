@@ -1,4 +1,5 @@
 import os
+import asyncio
 
 import httpx
 from fastapi import FastAPI, Request
@@ -7,6 +8,25 @@ from fastapi.responses import Response
 
 
 app = FastAPI(title="ZHU STOCK Mobile API", version="2.0.0")
+
+_upstream_client: httpx.AsyncClient | None = None
+
+
+@app.on_event("startup")
+async def open_upstream_client():
+    global _upstream_client
+    _upstream_client = httpx.AsyncClient(
+        timeout=httpx.Timeout(30.0, read=1800.0),
+        limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+    )
+
+
+@app.on_event("shutdown")
+async def close_upstream_client():
+    global _upstream_client
+    if _upstream_client is not None:
+        await _upstream_client.aclose()
+        _upstream_client = None
 
 UPSTREAM_API_BASE = os.getenv(
     "UPSTREAM_API_BASE", "https://zhu-stock-app.onrender.com"
@@ -86,14 +106,29 @@ async def mobile_gateway(path: str, request: Request):
         and key.lower() not in {"host", "origin", "referer", "accept-encoding"}
     }
 
+    body = await request.body()
+    client = _upstream_client
+    if client is None:
+        client = httpx.AsyncClient(timeout=httpx.Timeout(30.0, read=1800.0))
+
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, read=1800.0)) as client:
+        upstream = await client.request(
+            method=request.method,
+            url=target_url,
+            params=request.query_params,
+            headers=headers,
+            content=body,
+        )
+        # Render can briefly throttle bursts while a free instance is waking.
+        # Retrying safe reads prevents the mobile UI from failing on that transient.
+        if upstream.status_code == 429 and request.method in {"GET", "HEAD"}:
+            await asyncio.sleep(1.0)
             upstream = await client.request(
                 method=request.method,
                 url=target_url,
                 params=request.query_params,
                 headers=headers,
-                content=await request.body(),
+                content=body,
             )
     except httpx.TimeoutException:
         return Response(
@@ -105,6 +140,13 @@ async def mobile_gateway(path: str, request: Request):
         return Response(
             content='{"detail":"暫時無法連線雲端服務"}',
             status_code=502,
+            media_type="application/json",
+        )
+
+    if upstream.status_code == 429 and "json" not in upstream.headers.get("content-type", ""):
+        return Response(
+            content='{"detail":"請求過於頻繁，請稍候再試"}',
+            status_code=429,
             media_type="application/json",
         )
 

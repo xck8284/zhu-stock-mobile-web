@@ -267,6 +267,32 @@ button:disabled {
 .pageWithNav {
   padding-bottom: 100px;
 }
+
+.stockFilters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 8px;
+}
+
+.stockFilters select {
+  width: 100%;
+  margin: 0;
+  min-width: 0;
+}
+
+.filterCount {
+  margin: 0 0 12px;
+  color: #8b949e;
+  font-size: 13px;
+  text-align: right;
+}
+
+@media (max-width: 420px) {
+  .stockFilters {
+    grid-template-columns: 1fr;
+  }
+}
 .planCard {
   background: linear-gradient(135deg, #1e3a8a, #2563eb);
   border: 1px solid #3b82f6;

@@ -71,6 +71,12 @@ function App() {
   const [regConfirm, setRegConfirm] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regCode, setRegCode] = useState("");
+  const [resetAccount, setResetAccount] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetConfirm, setResetConfirm] = useState("");
+  const [resetStep, setResetStep] = useState("account");
+  const [resetMessage, setResetMessage] = useState("");
 
   const [analysisMeta, setAnalysisMeta] = useState(null);
   const [analysisRunning, setAnalysisRunning] = useState(false);
@@ -382,7 +388,77 @@ function App() {
     }
   };
 
-  const isLoggedIn = page !== "login" && page !== "register";
+  const sendResetCode = async () => {
+    if (!resetAccount.trim()) {
+      setResetMessage("請輸入註冊 Email 或帳號");
+      return;
+    }
+    setResetMessage("寄送中…");
+    try {
+      const response = await fetch(`${API_BASE}/auth/forgot-password`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ account: resetAccount.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setResetMessage(parseError(data));
+        return;
+      }
+      setResetStep("code");
+      setResetMessage(data.dev_code ? `驗證碼已寄出（測試碼：${data.dev_code}）` : "驗證碼已寄到註冊 Email，10 分鐘內有效");
+    } catch (error) {
+      console.error(error);
+      setResetMessage("伺服器連線失敗，請稍後再試");
+    }
+  };
+
+  const submitPasswordReset = async () => {
+    if (!resetCode.trim() || !resetPassword || !resetConfirm) {
+      setResetMessage("請完整填寫驗證碼與新密碼");
+      return;
+    }
+    if (resetPassword !== resetConfirm) {
+      setResetMessage("新密碼與確認密碼不一致");
+      return;
+    }
+    if (resetPassword.length < 6) {
+      setResetMessage("新密碼至少需要 6 個字元");
+      return;
+    }
+    setResetMessage("重設中…");
+    try {
+      const response = await fetch(`${API_BASE}/auth/reset-password`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          account: resetAccount.trim(),
+          code: resetCode.trim(),
+          new_password: resetPassword,
+          confirm_new_password: resetConfirm,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setResetMessage(parseError(data));
+        return;
+      }
+      setEmail(resetAccount.trim());
+      setPassword("");
+      setResetStep("account");
+      setResetCode("");
+      setResetPassword("");
+      setResetConfirm("");
+      setResetMessage("");
+      alert(data.message || "密碼已重設，請重新登入");
+      setPage("login");
+    } catch (error) {
+      console.error(error);
+      setResetMessage("伺服器連線失敗，請稍後再試");
+    }
+  };
+
+  const isLoggedIn = page !== "login" && page !== "register" && page !== "forgot-password";
 
   return (
     <div className="app">
@@ -418,11 +494,66 @@ function App() {
 
           <button onClick={() => login()}>登入</button>
 
+          <p className="link" onClick={() => {
+            setResetAccount(email);
+            setResetMessage("");
+            setPage("forgot-password");
+          }}>
+            忘記密碼？使用 Email 重設
+          </p>
+
           <p className="subText">創作者帳號登入後，底部導覽會出現「後台」。</p>
 
           <p className="link" onClick={() => setPage("register")}>
             還沒有帳號？前往註冊
           </p>
+        </section>
+      )}
+
+      {page === "forgot-password" && (
+        <section className="panel">
+          <h2>忘記密碼</h2>
+          <input
+            placeholder="註冊 Email 或帳號"
+            value={resetAccount}
+            onChange={(e) => setResetAccount(e.target.value)}
+            disabled={resetStep === "code"}
+          />
+
+          {resetStep === "account" ? (
+            <button onClick={sendResetCode}>寄送 Email 驗證碼</button>
+          ) : (
+            <>
+              <input
+                placeholder="6 位數 Email 驗證碼"
+                inputMode="numeric"
+                value={resetCode}
+                onChange={(e) => setResetCode(e.target.value)}
+              />
+              <input
+                type="password"
+                placeholder="新密碼（至少 6 個字元）"
+                value={resetPassword}
+                onChange={(e) => setResetPassword(e.target.value)}
+              />
+              <input
+                type="password"
+                placeholder="確認新密碼"
+                value={resetConfirm}
+                onChange={(e) => setResetConfirm(e.target.value)}
+              />
+              <button onClick={submitPasswordReset}>重設密碼</button>
+              <p className="link" onClick={() => {
+                setResetStep("account");
+                setResetMessage("");
+              }}>
+                重新輸入帳號／Email
+              </p>
+            </>
+          )}
+
+          {resetMessage && <div className="message">{resetMessage}</div>}
+          <p className="link" onClick={() => setPage("login")}>返回登入</p>
         </section>
       )}
 

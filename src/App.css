@@ -288,6 +288,13 @@ button:disabled {
   text-align: right;
 }
 
+.dataSource {
+  margin: 4px 0 12px;
+  color: #8b949e;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 @media (max-width: 420px) {
   .stockFilters {
     grid-template-columns: 1fr;

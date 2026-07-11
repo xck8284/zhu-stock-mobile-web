@@ -536,12 +536,12 @@ function App() {
         />
       )}
       {page === "bullish-keyk" && (
-        <KeyKListPage title="🔑 多方關鍵K" type="bullish-keyk" memberInfo={memberInfo} setPage={setPage} />
+        <KeyKListPage title="🔑 多方關鍵K" type="bullish-keyk" memberInfo={memberInfo} setPage={setPage} analysisMeta={analysisMeta} />
       )}
       {page === "bearish-keyk" && (
-        <KeyKListPage title="🔑 空方關鍵K" type="bearish-keyk" memberInfo={memberInfo} setPage={setPage} />
+        <KeyKListPage title="🔑 空方關鍵K" type="bearish-keyk" memberInfo={memberInfo} setPage={setPage} analysisMeta={analysisMeta} />
       )}
-      {page === "warrant" && <WarrantPage memberInfo={memberInfo} setPage={setPage} />}
+      {page === "warrant" && <WarrantPage memberInfo={memberInfo} setPage={setPage} analysisMeta={analysisMeta} />}
       {page === "member" && (
         <MemberPage setPage={setPage} memberInfo={memberInfo} onRefresh={refreshMemberInfo} />
       )}
@@ -833,6 +833,9 @@ function StockListPage({ title, type, memberInfo, setPage, analysisMeta, onRunAn
   return (
     <section className="panel pageWithNav">
       <h2>{title}</h2>
+      <p className="dataSource">
+        資料日：{analysisMeta?.settle_date || "—"}｜來源：TWSE 臺灣證券交易所、TPEx 櫃買中心官方資料
+      </p>
       {isStaleList && (
         <div className="listAnalysisBox">
           <p className="message">
@@ -925,7 +928,8 @@ function StockListPage({ title, type, memberInfo, setPage, analysisMeta, onRunAn
             <small>乖離率：{bias}</small>
             {shortAlarm === "是" && <small className="alarm">短線Alarm</small>}
             {longAlarm === "是" && <small className="alarm">長線Alarm</small>}
-            {s.settle_date && <small>週結：{s.settle_date}</small>}
+            <small>資料日：{analysisMeta?.settle_date || s.settle_date || "—"}</small>
+            <small>來源：{market.includes("上櫃") ? "TPEx 櫃買中心" : "TWSE 臺灣證券交易所"}</small>
             {s.memory_note && s.memory_note.includes("上櫃") && (
               <small>上櫃補強</small>
             )}
@@ -936,7 +940,7 @@ function StockListPage({ title, type, memberInfo, setPage, analysisMeta, onRunAn
   );
 }
 
-function KeyKListPage({ title, type, memberInfo, setPage }) {
+function KeyKListPage({ title, type, memberInfo, setPage, analysisMeta }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -972,6 +976,9 @@ function KeyKListPage({ title, type, memberInfo, setPage }) {
   return (
     <section className="panel pageWithNav">
       <h2>{title}</h2>
+      <p className="dataSource">
+        資料日：{analysisMeta?.settle_date || "—"}｜來源：TWSE／TPEx 官方資料
+      </p>
       {!loading && !error && items.length > 0 && (
         <p className="subText">共 {items.length} 檔</p>
       )}
@@ -1010,7 +1017,7 @@ function KeyKListPage({ title, type, memberInfo, setPage }) {
             {s.box_distance_pct !== "" && s.box_distance_pct != null && (
               <small>盤整距離：{s.box_distance_pct}%</small>
             )}
-            {s.settle_date && <small>週結：{s.settle_date}</small>}
+            <small>資料日：{analysisMeta?.settle_date || s.settle_date || "—"}</small>
           </div>
         );
       })}
@@ -1018,7 +1025,7 @@ function KeyKListPage({ title, type, memberInfo, setPage }) {
   );
 }
 
-function WarrantPage({ memberInfo, setPage }) {
+function WarrantPage({ memberInfo, setPage, analysisMeta }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -1054,6 +1061,9 @@ function WarrantPage({ memberInfo, setPage }) {
   return (
     <section className="panel pageWithNav">
       <h2>🎯 權證專區</h2>
+      <p className="dataSource">
+        資料日：{analysisMeta?.settle_date || "—"}｜來源：TWSE／TPEx 官方資料
+      </p>
 
       {loading && <div className="adminItem">載入中...</div>}
       {error && (

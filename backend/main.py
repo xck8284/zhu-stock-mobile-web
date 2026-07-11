@@ -161,7 +161,7 @@ async def mobile_gateway(path: str, request: Request):
         if key.lower() not in HOP_BY_HOP_HEADERS
     }
     return StreamingResponse(
-        upstream.aiter_raw(),
+        upstream.aiter_bytes(),
         status_code=upstream.status_code,
         headers=response_headers,
         background=BackgroundTask(upstream.aclose),

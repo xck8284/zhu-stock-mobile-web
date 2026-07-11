@@ -811,7 +811,7 @@ function StockListPage({ title, type, memberInfo, setPage, analysisMeta, onRunAn
 
   const getBias = (item) => {
     const value = Number.parseFloat(String(item.bias ?? "").replace("%", ""));
-    return Number.isFinite(value) ? Math.abs(value) : null;
+    return Number.isFinite(value) ? value : null;
   };
 
   const filteredItems = items.filter((item) => {

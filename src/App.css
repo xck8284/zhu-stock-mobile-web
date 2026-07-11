@@ -366,6 +366,11 @@ button:disabled {
   width: auto;
 }
 
+.adminActions .dangerBtn,
+.dangerBtn {
+  background: #b42318;
+}
+
 .adminUserCard button {
   margin-top: 8px;
 }

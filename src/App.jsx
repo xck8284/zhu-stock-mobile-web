@@ -823,10 +823,12 @@ function StockListPage({ title, type, memberInfo, setPage, analysisMeta, onRunAn
     if (marketFilter !== "all" && !market.includes(marketFilter)) return false;
     if (starFilter !== "all" && stars < Number(starFilter)) return false;
     if (scoreFilter !== "all" && (!Number.isFinite(score) || score < Number(scoreFilter))) return false;
-    if (biasFilter === "0-3" && (bias === null || bias > 3)) return false;
-    if (biasFilter === "3-5" && (bias === null || bias <= 3 || bias > 5)) return false;
-    if (biasFilter === "5-10" && (bias === null || bias <= 5 || bias > 10)) return false;
-    if (biasFilter === "10+" && (bias === null || bias <= 10)) return false;
+    if (biasFilter === "gt100" && (bias === null || bias <= 100)) return false;
+    if (biasFilter === "gt80" && (bias === null || bias <= 80)) return false;
+    if (biasFilter === "gt50" && (bias === null || bias <= 50)) return false;
+    if (biasFilter === "lt50" && (bias === null || bias >= 50)) return false;
+    if (biasFilter === "lt30" && (bias === null || bias >= 30)) return false;
+    if (biasFilter === "lt10" && (bias === null || bias >= 10)) return false;
     return true;
   });
 
@@ -873,10 +875,12 @@ function StockListPage({ title, type, memberInfo, setPage, analysisMeta, onRunAn
             </select>
             <select value={biasFilter} onChange={(e) => setBiasFilter(e.target.value)}>
               <option value="all">全部乖離率</option>
-              <option value="0-3">乖離率 ≤ 3%</option>
-              <option value="3-5">乖離率 3–5%</option>
-              <option value="5-10">乖離率 5–10%</option>
-              <option value="10+">乖離率 &gt; 10%</option>
+              <option value="gt100">乖離率 &gt; 100%</option>
+              <option value="gt80">乖離率 &gt; 80%</option>
+              <option value="gt50">乖離率 &gt; 50%</option>
+              <option value="lt50">乖離率 &lt; 50%</option>
+              <option value="lt30">乖離率 &lt; 30%</option>
+              <option value="lt10">乖離率 &lt; 10%</option>
             </select>
           </div>
           <p className="filterCount">顯示 {filteredItems.length}／{items.length} 檔</p>

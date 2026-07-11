@@ -640,13 +640,10 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
         )}
         {isAnalyzing && (
           <p className="message">
-            清單目前顯示的是舊資料（7/4 的 {analysisMeta?.bullish_count ?? 10} 檔），分析完成後才會變成跟電腦版接近的數量。
+            清單目前顯示的是舊資料（資料日 {analysisMeta?.settle_date || "—"}），分析完成後會自動更新。
             {isParsingCache ? " 現在在解析歷史快取，請勿重複按「強制重新啟動」。" : ""}
           </p>
         )}
-        <p className="subText">
-          看多＝週20MA上＋下降趨勢線守穩；多方關鍵K＝突破盤整爆量；看空＝週20MA下＋上升趨勢線守弱；權證另需≥100分、5星。
-        </p>
 
         {isAnalyzing && hasPartialData && serverProgress >= 85 && (
           <p className="subText">看多/看空可能已更新，可先進入清單查看；權證整理完成後請刷新權證頁。</p>
@@ -743,15 +740,15 @@ function HomePage({ setPage, isCreator, memberInfo, analysisMeta, onRunAnalysis,
 }
 
 function StockListPage({ title, type, memberInfo, setPage, analysisMeta, onRunAnalysis }) {
-  const strategyText =
-    type === "bullish"
-      ? "站上週20MA → 兩高點畫下降趨勢線（中間不穿K）→ 週量≥1萬 → 突破後守穩。"
-      : "跌破週20MA → 兩低點畫上升趨勢線（中間不穿K）→ 週量≥1萬 → 跌破後守穩。";
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [statusHint, setStatusHint] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [marketFilter, setMarketFilter] = useState("all");
+  const [starFilter, setStarFilter] = useState("all");
+  const [scoreFilter, setScoreFilter] = useState("all");
+  const [biasFilter, setBiasFilter] = useState("all");
 
   const licenseBlocked =
     memberInfo && memberInfo.allowed === false && !memberInfo.is_creator;
@@ -800,15 +797,47 @@ function StockListPage({ title, type, memberInfo, setPage, analysisMeta, onRunAn
     return text.includes("%") ? text : `${text}%`;
   };
 
+  const getStarCount = (item) => {
+    const numeric = Number(item.star_count ?? item.star_value ?? item.stars_value);
+    if (Number.isFinite(numeric) && numeric > 0) return numeric;
+    return (String(item.stars || item.star || "").match(/★/g) || []).length;
+  };
+
+  const getScore = (item) => Number(
+    type === "bearish"
+      ? item.bearish_score ?? item.strong_score ?? item.score
+      : item.strong_score ?? item.score
+  );
+
+  const getBias = (item) => {
+    const value = Number.parseFloat(String(item.bias ?? "").replace("%", ""));
+    return Number.isFinite(value) ? Math.abs(value) : null;
+  };
+
+  const filteredItems = items.filter((item) => {
+    const market = String(item.market || item.industry || "");
+    const stars = getStarCount(item);
+    const score = getScore(item);
+    const bias = getBias(item);
+
+    if (marketFilter !== "all" && !market.includes(marketFilter)) return false;
+    if (starFilter !== "all" && stars < Number(starFilter)) return false;
+    if (scoreFilter !== "all" && (!Number.isFinite(score) || score < Number(scoreFilter))) return false;
+    if (biasFilter === "0-3" && (bias === null || bias > 3)) return false;
+    if (biasFilter === "3-5" && (bias === null || bias <= 3 || bias > 5)) return false;
+    if (biasFilter === "5-10" && (bias === null || bias <= 5 || bias > 10)) return false;
+    if (biasFilter === "10+" && (bias === null || bias <= 10)) return false;
+    return true;
+  });
+
   return (
     <section className="panel pageWithNav">
       <h2>{title}</h2>
-      <p className="subText">{strategyText}</p>
       {isStaleList && (
         <div className="listAnalysisBox">
           <p className="message">
             分析進行中（{analysisMeta?.job_message || "載入中…"}）— 下面 {items.length}{" "}
-            檔是 7/4 舊資料，完成後才會變多。請回首頁看進度，勿在此頁重複按重啟。
+            檔是資料日 {analysisMeta?.settle_date || "—"} 的舊資料，完成後會自動更新。請回首頁看進度，勿在此頁重複按重啟。
           </p>
           <div className="heroActions">
             <button className="secondaryBtn" onClick={() => setPage("home")}>
@@ -819,7 +848,36 @@ function StockListPage({ title, type, memberInfo, setPage, analysisMeta, onRunAn
       )}
       {statusHint && !error && !isStaleList && <p className="subText">{statusHint}</p>}
       {!loading && !error && items.length > 0 && (
-        <p className="subText">共 {items.length} 檔（對齊桌面版策略）</p>
+        <>
+          <div className="stockFilters">
+            <select value={marketFilter} onChange={(e) => setMarketFilter(e.target.value)}>
+              <option value="all">全部市場</option>
+              <option value="上市">上市</option>
+              <option value="上櫃">上櫃</option>
+            </select>
+            <select value={starFilter} onChange={(e) => setStarFilter(e.target.value)}>
+              <option value="all">全部星等</option>
+              <option value="5">5 星</option>
+              <option value="4">4 星以上</option>
+              <option value="3">3 星以上</option>
+            </select>
+            <select value={scoreFilter} onChange={(e) => setScoreFilter(e.target.value)}>
+              <option value="all">全部分數</option>
+              <option value="120">StrongScore ≥ 120</option>
+              <option value="100">StrongScore ≥ 100</option>
+              <option value="80">StrongScore ≥ 80</option>
+              <option value="60">StrongScore ≥ 60</option>
+            </select>
+            <select value={biasFilter} onChange={(e) => setBiasFilter(e.target.value)}>
+              <option value="all">全部乖離率</option>
+              <option value="0-3">乖離率 ≤ 3%</option>
+              <option value="3-5">乖離率 3–5%</option>
+              <option value="5-10">乖離率 5–10%</option>
+              <option value="10+">乖離率 &gt; 10%</option>
+            </select>
+          </div>
+          <p className="filterCount">顯示 {filteredItems.length}／{items.length} 檔</p>
+        </>
       )}
 
       {loading && <div className="adminItem">載入中...</div>}
@@ -844,7 +902,7 @@ function StockListPage({ title, type, memberInfo, setPage, analysisMeta, onRunAn
         </div>
       )}
 
-      {items.map((s, index) => {
+      {filteredItems.map((s, index) => {
         const code = s.stock_id || s.code || s.symbol || "-";
         const name = s.name || "";
         const stars = s.stars || s.star || "";
@@ -883,10 +941,6 @@ function KeyKListPage({ title, type, memberInfo, setPage }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
-  const strategyText =
-    type === "bullish-keyk"
-      ? "多方關鍵K：本週突破下降趨勢線＋突破盤整區，且週量≥1萬（爆大量/天量）。"
-      : "空方關鍵K：本週正式跌破上升趨勢線。";;
 
   const licenseBlocked =
     memberInfo && memberInfo.allowed === false && !memberInfo.is_creator;
@@ -918,7 +972,6 @@ function KeyKListPage({ title, type, memberInfo, setPage }) {
   return (
     <section className="panel pageWithNav">
       <h2>{title}</h2>
-      <p className="subText">{strategyText}</p>
       {!loading && !error && items.length > 0 && (
         <p className="subText">共 {items.length} 檔</p>
       )}
@@ -1001,7 +1054,6 @@ function WarrantPage({ memberInfo, setPage }) {
   return (
     <section className="panel pageWithNav">
       <h2>🎯 權證專區</h2>
-      <p className="subText">看多：週20MA＋趨勢突破守穩（同桌面版 CLIENT_BULLISH）。權證另篩 StrongScore≥100、5 星、剩餘 90～120 天。</p>
 
       {loading && <div className="adminItem">載入中...</div>}
       {error && (
